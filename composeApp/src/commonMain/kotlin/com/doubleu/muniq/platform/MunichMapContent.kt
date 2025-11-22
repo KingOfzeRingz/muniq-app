@@ -19,13 +19,14 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.ExperimentalResourceApi
-import org.jetbrains.compose.resources.resource
+import muniq.composeapp.generated.resources.Res
+import kotlinx.serialization.json.contentOrNull
 
 private const val USE_DISTINCT_DISTRICT_COLORS = false
 private val districtColorOverrides: Map<String, Int> = emptyMap()
-private const val DEFAULT_CAMERA_LATITUDE = 48.137154
-private const val DEFAULT_CAMERA_LONGITUDE = 11.576124
-private const val DEFAULT_CAMERA_ZOOM = 11f
+internal const val DEFAULT_CAMERA_LATITUDE = 48.137154
+internal const val DEFAULT_CAMERA_LONGITUDE = 11.576124
+internal const val DEFAULT_CAMERA_ZOOM = 11f
 
 data class GeoCoordinate(val latitude: Double, val longitude: Double)
 
@@ -90,9 +91,7 @@ private object MunichDistrictRepository {
 
     @OptIn(ExperimentalResourceApi::class)
     private suspend fun readGeoJson(): String = withContext(Dispatchers.Default) {
-        resource("files/munich_districts.json")
-            .readBytes()
-            .decodeToString()
+        Res.readBytes("files/munich_districts.json").decodeToString()
     }
 
     private fun parseGeoJson(raw: String): List<DistrictGeometry> {
@@ -150,7 +149,7 @@ private data class MapPalette(
     fun fillColorFor(feature: DistrictGeometry): Int {
         val override = feature.sbNumber
             ?.let(districtColorOverrides::get)
-            ?.ensureAlpha(Color.alpha(uniformFillColor))
+            ?.ensureAlpha((uniformFillColor ushr 24) and 0xFF)
         if (override != null) return override
         return if (USE_DISTINCT_DISTRICT_COLORS) {
             generatedColor(feature.sbNumber ?: feature.id)

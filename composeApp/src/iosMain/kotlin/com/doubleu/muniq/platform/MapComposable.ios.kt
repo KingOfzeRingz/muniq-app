@@ -1,26 +1,34 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package com.doubleu.muniq.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.interop.UIKitView
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.cValue
 import platform.CoreGraphics.CGRectMake
-import platform.CoreLocation.CLLocationCoordinate2D
 import platform.Foundation.NSError
 import platform.Foundation.NSMutableArray
-import platform.GoogleMaps.GMSCameraPosition
-import platform.GoogleMaps.GMSMapStyle
-import platform.GoogleMaps.GMSMapView
-import platform.GoogleMaps.GMSMapViewDelegateProtocol
-import platform.GoogleMaps.GMSMutablePath
-import platform.GoogleMaps.GMSOverlay
-import platform.GoogleMaps.GMSPolygon
-import platform.GoogleMaps.kGMSTypeNormal
+import cocoapods.GoogleMaps.GMSCameraPosition
+import cocoapods.GoogleMaps.GMSCameraUpdate
+import cocoapods.GoogleMaps.GMSMapStyle
+import cocoapods.GoogleMaps.GMSMapView
+import cocoapods.GoogleMaps.GMSMapViewDelegateProtocol
+import cocoapods.GoogleMaps.GMSMutablePath
+import cocoapods.GoogleMaps.GMSOverlay
+import cocoapods.GoogleMaps.GMSPolygon
+import cocoapods.GoogleMaps.kGMSTypeNormal
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
 import platform.UIKit.NSTextAlignmentCenter
 import platform.UIKit.UIApplication
 import platform.UIKit.UIColor
@@ -54,7 +62,7 @@ actual fun MuniqMap(
                 longitude = DEFAULT_CAMERA_LONGITUDE,
                 zoom = DEFAULT_CAMERA_ZOOM
             )
-            GMSMapView(frame = CGRectMake(0.0, 0.0, 0.0, 0.0), camera = camera).apply {
+            GMSMapView.mapWithFrame(frame = CGRectMake(0.0, 0.0, 0.0, 0.0), camera = camera).apply {
                 settings.compassButton = false
                 settings.indoorPicker = false
                 settings.myLocationButton = false
@@ -62,8 +70,8 @@ actual fun MuniqMap(
                 settings.zoomGestures = true
                 settings.rotateGestures = false
                 settings.tiltGestures = false
-                mapType = platform.GoogleMaps.kGMSTypeNormal
-                delegate = delegate
+                mapType = kGMSTypeNormal
+                this.delegate = delegate
             }
         },
         update = { mapView ->
@@ -93,7 +101,7 @@ private fun GMSMapView.renderDistricts(content: MunichMapContent?) {
                 strokeWidth = 3.75
                 tappable = true
                 userData = district.displayName as Any?
-                holes = polygon.holes.toHolesArray()
+                holes = polygon.holes.toHolesArray() as List<*>?
             }
             overlay.map = this
         }
@@ -119,8 +127,12 @@ private fun GMSMapView.updateCamera(camera: MapCamera?) {
 }
 
 private fun GMSMapView.animateToLocation(latitude: Double, longitude: Double, zoom: Float) {
-    val update = GMSCameraPosition.cameraWithLatitude(latitude, longitude, zoom)
-    animateToCameraPosition(update)
+    val target = cValue<cocoapods.GoogleMaps.CLLocationCoordinate2D> {
+        this.latitude = latitude
+        this.longitude = longitude
+    }
+    val update = GMSCameraUpdate.setTarget(target, zoom = zoom)
+    moveCamera(update)
 }
 
 private fun GMSMapView.applyTheme(isDarkTheme: Boolean) {
@@ -153,25 +165,26 @@ private class MuniqMapDelegate : platform.darwin.NSObject(), GMSMapViewDelegateP
     var onDistrictTap: ((String) -> Unit)? = null
     var isDarkTheme: Boolean = false
 
-    override fun mapView(mapView: GMSMapView, didTapAtCoordinate: CLLocationCoordinate2D) {
-        onMapTap?.invoke(didTapAtCoordinate.latitude, didTapAtCoordinate.longitude)
+    override fun mapView(mapView: GMSMapView, didTapAtCoordinate: CValue<cocoapods.GoogleMaps.CLLocationCoordinate2D>) {
+        didTapAtCoordinate.useContents {
+            onMapTap?.invoke(latitude, longitude)
+        }
     }
 
-    override fun mapView(mapView: GMSMapView, didTap overlay: GMSOverlay): Boolean {
-        val districtName = overlay.userData as? String ?: return false
+    override fun mapView(mapView: GMSMapView, didTapOverlay: GMSOverlay) {
+        val districtName = didTapOverlay.userData as? String ?: return
         onDistrictTap?.invoke(districtName)
-        return true
     }
 }
 
 private fun presentToast(message: String) {
     val window = activeWindow() ?: return
-    val label = UILabel(frame = CGRectMake(32.0, window.bounds.size.height - 120.0, window.bounds.size.width - 64.0, 44.0)).apply {
+    val label = UILabel(frame = CGRectMake(32.0, window.bounds.useContents { size.height } - 120.0, window.bounds.useContents { size.width } - 64.0, 44.0)).apply {
         backgroundColor = UIColor.blackColor.colorWithAlphaComponent(0.7)
         textColor = UIColor.whiteColor
         font = UIFont.systemFontOfSize(15.0)
         textAlignment = NSTextAlignmentCenter
-        numberOfLines = 2u
+        numberOfLines = 2
         text = "District: $message"
         layer.cornerRadius = 12.0
         layer.masksToBounds = true
@@ -204,12 +217,14 @@ private fun activeWindow(): UIWindow? {
     val application = UIApplication.sharedApplication
     application.keyWindow?.let { return it }
     val windows = application.windows
-    val count = windows.count.toInt()
+    val count = windows.size
     for (index in 0 until count) {
-        val candidate = windows.objectAtIndex(index.toULong()) as? UIWindow
-        if (candidate?.isKeyWindow == true) {
+        val candidate = windows[index] as? UIWindow
+        if (candidate?.isKeyWindow() == true) {
             return candidate
         }
     }
     return null
 }
+
+private const val DARK_MAP_STYLE_JSON = "[]"

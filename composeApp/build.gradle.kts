@@ -16,10 +16,10 @@ kotlin {
         }
     }
 
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
+//    wasmJs {
+//        browser()
+//        binaries.executable()
+//    }
 
     listOf(
         iosArm64(),
@@ -73,11 +73,11 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
 
         }
-        wasmJsMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.html.core)
-        }
+//        wasmJsMain.dependencies {
+//            implementation(compose.runtime)
+//            implementation(compose.foundation)
+//            implementation(compose.html.core)
+//        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
