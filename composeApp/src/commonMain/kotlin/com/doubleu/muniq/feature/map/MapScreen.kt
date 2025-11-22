@@ -21,14 +21,18 @@ import com.doubleu.muniq.platform.MuniqMap
 fun MapScreen(
     drawerState: DrawerState = remember { DrawerState() },
     onFilterClick: () -> Unit = {},
-    onMapTap: (Double, Double) -> Unit = { _, _ -> }
+    onMapTap: (Double, Double) -> Unit = { _, _ -> },
+    onOpenSettings: () -> Unit = {},
+    isDarkTheme: Boolean = false,
+    strings: com.doubleu.muniq.core.localization.Strings = com.doubleu.muniq.core.localization.Localization.strings
 ) {
     SidebarLayout(
         drawerState = drawerState,
         drawerContent = {
             MuniqSidebarContent(
+                strings = strings,
                 onAboutClick = {},
-                onPreferencesClick = {},
+                onPreferencesClick = onOpenSettings,
                 onLanguageClick = {},
                 onResetClick = {}
             )
@@ -39,6 +43,7 @@ fun MapScreen(
 
             MuniqMap(
                 modifier = Modifier.fillMaxSize(),
+                isDarkTheme = isDarkTheme,
                 onTap = onMapTap
             )
 

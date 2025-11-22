@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun MuniqSidebarContent(
+    strings: com.doubleu.muniq.core.localization.Strings,
     onAboutClick: () -> Unit,
     onPreferencesClick: () -> Unit,
     onLanguageClick: () -> Unit,
@@ -29,15 +30,15 @@ fun MuniqSidebarContent(
     ) {
 
         Text(
-            "Muniq",
+            strings.appName,
             style = MaterialTheme.typography.headlineMedium
         )
 
         Divider()
 
         Spacer(modifier = Modifier.weight(1f))
-        SidebarItem(Icons.Outlined.Settings, "Settings", onPreferencesClick)
-        SidebarItem(Icons.Outlined.Info, "About Muniq", onAboutClick)
+        SidebarItem(Icons.Outlined.Settings, strings.sidebar_settings, onPreferencesClick)
+        SidebarItem(Icons.Outlined.Info, strings.sidebar_about, onAboutClick)
     }
 }
 
