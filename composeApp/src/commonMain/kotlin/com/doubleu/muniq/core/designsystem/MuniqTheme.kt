@@ -5,23 +5,40 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
     primary = MuniqColors.MunichBlue,
-    onPrimary = MuniqColors.CardBackground,
+    onPrimary = Color.White,
+    primaryContainer = MuniqColors.MunichBlueContainer,
+    onPrimaryContainer = MuniqColors.MunichBlueContainerText,
+    secondary = MuniqColors.MunichBlue,
+    onSecondary = Color.White,
+    secondaryContainer = MuniqColors.MunichBlueSoft,
+    onSecondaryContainer = MuniqColors.MunichBlueContainerText,
     surface = MuniqColors.CardBackground,
     onSurface = MuniqColors.BodyText,
     background = MuniqColors.BackgroundLight,
     onBackground = MuniqColors.BodyText,
-    outline = MuniqColors.Border,
+    surfaceVariant = MuniqColors.MunichBlueSoft,
+    outline = MuniqColors.Border
 )
 
 private val DarkColorScheme = darkColorScheme(
     primary = MuniqDarkColors.MunichBlue,
-    background = MuniqDarkColors.Background,
+    onPrimary = Color.White,
+    primaryContainer = MuniqDarkColors.MunichBlueContainer,
+    onPrimaryContainer = MuniqDarkColors.MunichBlueContainerText,
+    secondary = MuniqDarkColors.MunichBlue,
+    onSecondary = Color.White,
+    secondaryContainer = MuniqDarkColors.SurfaceVariant,
+    onSecondaryContainer = MuniqDarkColors.Text,
     surface = MuniqDarkColors.Surface,
     onSurface = MuniqDarkColors.Text,
+    background = MuniqDarkColors.Background,
     onBackground = MuniqDarkColors.Text,
+    surfaceVariant = MuniqDarkColors.SurfaceVariant,
+    outline = MuniqDarkColors.Border
 )
 
 

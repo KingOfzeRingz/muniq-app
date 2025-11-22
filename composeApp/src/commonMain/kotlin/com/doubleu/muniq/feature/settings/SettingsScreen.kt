@@ -20,9 +20,9 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +55,7 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(strings.settings_title) },
@@ -126,7 +127,9 @@ private fun LanguageDropdown(
             shape = RoundedCornerShape(16.dp),
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
             )
         )
 
@@ -140,7 +143,8 @@ private fun LanguageDropdown(
                     onClick = {
                         onLanguageSelected(language)
                         expanded = false
-                    }
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
         }
