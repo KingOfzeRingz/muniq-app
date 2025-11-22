@@ -48,6 +48,9 @@ kotlin {
             implementation("io.insert-koin:koin-compose:4.1.1")
             implementation(compose.runtime)
             implementation(compose.materialIconsExtended)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
