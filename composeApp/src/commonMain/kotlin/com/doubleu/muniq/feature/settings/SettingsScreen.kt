@@ -21,14 +21,13 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenuItemDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -116,7 +115,7 @@ private fun LanguageDropdown(
     onLanguageSelected: (Language) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val dropdownShape = RoundedCornerShape(18.dp)
+    val dropdownShape = RoundedCornerShape(12.dp)
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -131,10 +130,8 @@ private fun LanguageDropdown(
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
             modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
-                .clip(dropdownShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
             shape = dropdownShape,
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -148,22 +145,16 @@ private fun LanguageDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier
+                .background(MaterialTheme.colorScheme.surface)
                 .clip(dropdownShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Language.values().forEach { language ->
+            Language.entries.forEach { language ->
                 DropdownMenuItem(
                     text = { Text(strings.languageLabel(language)) },
                     onClick = {
                         onLanguageSelected(language)
                         expanded = false
                     },
-                    colors = DropdownMenuItemDefaults.colors(
-                        textColor = MaterialTheme.colorScheme.onSurface,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    modifier = Modifier.clip(RoundedCornerShape(12.dp)),
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }

@@ -31,6 +31,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation("io.insert-koin:koin-android:4.1.1")
             implementation("com.google.maps.android:maps-compose:6.12.2")
+            implementation("com.google.maps.android:android-maps-utils:3.8.2")
             implementation("com.google.android.gms:play-services-maps:19.2.0")
             implementation("io.insert-koin:koin-android:4.1.1")
             implementation(compose.runtime)
