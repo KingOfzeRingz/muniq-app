@@ -1,5 +1,6 @@
 package com.doubleu.muniq.feature.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +21,9 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuItemDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -31,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,13 +67,17 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState()),
@@ -108,6 +116,7 @@ private fun LanguageDropdown(
     onLanguageSelected: (Language) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val dropdownShape = RoundedCornerShape(18.dp)
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -123,8 +132,10 @@ private fun LanguageDropdown(
             },
             modifier = Modifier
                 .menuAnchor()
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+                .fillMaxWidth()
+                .clip(dropdownShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            shape = dropdownShape,
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -135,7 +146,10 @@ private fun LanguageDropdown(
 
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .clip(dropdownShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Language.values().forEach { language ->
                 DropdownMenuItem(
@@ -144,6 +158,12 @@ private fun LanguageDropdown(
                         onLanguageSelected(language)
                         expanded = false
                     },
+                    colors = DropdownMenuItemDefaults.colors(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)),
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
