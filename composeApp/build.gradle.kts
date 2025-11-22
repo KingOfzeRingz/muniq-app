@@ -30,6 +30,10 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation("io.insert-koin:koin-android:4.1.1")
+            implementation("com.google.maps.android:maps-compose:6.12.2")
+            implementation("com.google.android.gms:play-services-maps:19.2.0")
+            implementation("io.insert-koin:koin-android:4.1.1")
+            implementation(compose.runtime)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -43,6 +47,7 @@ kotlin {
             implementation("io.insert-koin:koin-core:4.1.1")
             implementation("io.insert-koin:koin-compose:4.1.1")
             implementation(compose.runtime)
+            implementation(compose.materialIconsExtended)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -60,6 +65,7 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["MAPS_API_KEY"] = "AIzaSyDl6xSS7PZIsZ66ATqbxjQ4UU0JzOvHN8Y"
     }
     packaging {
         resources {

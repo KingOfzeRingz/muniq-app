@@ -1,9 +1,10 @@
 package com.doubleu.muniq.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 
 @Composable
 expect fun MuniqMap(
-    selectedDistrictId: String?,
-    onDistrictTapped: (String) -> Unit
+    modifier: Modifier = Modifier,
+    onTap: (latitude: Double, longitude: Double) -> Unit = { _, _ -> }
 )

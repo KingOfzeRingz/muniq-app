@@ -3,7 +3,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class Navigator {
-    private val _current = MutableStateFlow<Screen>(Screen.Onboarding)
+    private val _current = MutableStateFlow<Screen>(Screen.Map)
     val current: StateFlow<Screen> = _current
 
     fun navigate(screen: Screen) {
