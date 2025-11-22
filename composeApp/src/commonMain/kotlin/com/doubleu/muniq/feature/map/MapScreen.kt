@@ -12,58 +12,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.doubleu.muniq.core.designsystem.MuniqColors
+import com.doubleu.muniq.feature.sidebar.MuniqSidebarContent
+import com.doubleu.muniq.feature.sidebar.SidebarLayout
+import com.doubleu.muniq.feature.sidebar.DrawerState
 import com.doubleu.muniq.platform.MuniqMap
 
 @Composable
 fun MapScreen(
-    onMenuClick: () -> Unit = {},
+    drawerState: DrawerState = remember { DrawerState() },
     onFilterClick: () -> Unit = {},
-    onFabClick: () -> Unit = {},
     onMapTap: (Double, Double) -> Unit = { _, _ -> }
 ) {
-    Box(Modifier.fillMaxSize()) {
+    SidebarLayout(
+        drawerState = drawerState,
+        drawerContent = {
+            MuniqSidebarContent(
+                onAboutClick = {},
+                onPreferencesClick = {},
+                onLanguageClick = {},
+                onResetClick = {}
+            )
+        }
+    ) {
 
-        // --- MAP -----------------------------------------------------------
-        MuniqMap(
-            modifier = Modifier.fillMaxSize(),
-            onTap = onMapTap
-        )
+        Box(Modifier.fillMaxSize()) {
 
-        // --- SAFE AREA ------------------------------------------------------
-        val safeArea = WindowInsets.safeDrawing.asPaddingValues()
+            MuniqMap(
+                modifier = Modifier.fillMaxSize(),
+                onTap = onMapTap
+            )
 
-        // --- TOP LEFT BUTTON (MENU) ----------------------------------------
-        MuniqCircleIconButton(
-            icon = Icons.Rounded.Menu,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(safeArea)
-                .padding(12.dp),
-            onClick = onMenuClick
-        )
+            val safeArea = WindowInsets.safeDrawing.asPaddingValues()
 
-        // --- TOP RIGHT BUTTON (FILTER) -------------------------------------
-        MuniqCircleIconButton(
-            icon = Icons.Rounded.Tune,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(safeArea)
-                .padding(12.dp),
-            onClick = onFilterClick
-        )
-//
-//        // --- FLOATING ACTION BUTTON (FAB) ----------------------------------
-//        FloatingActionButton(
-//            modifier = Modifier
-//                .align(Alignment.BottomCenter)
-//                .padding(safeArea)
-//                .padding(bottom = 24.dp),
-//            containerColor = MuniqColors.MunichBlue,
-//            onClick = onFabClick
-//        ) {
-//            Text("✨", color = Color.White)
-//        }
+            MuniqCircleIconButton(
+                icon = Icons.Rounded.Menu,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(safeArea)
+                    .padding(12.dp),
+                onClick = { drawerState.open() }
+            )
+
+            MuniqCircleIconButton(
+                icon = Icons.Rounded.Tune,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(safeArea)
+                    .padding(12.dp),
+                onClick = onFilterClick
+            )
+        }
     }
 }
 

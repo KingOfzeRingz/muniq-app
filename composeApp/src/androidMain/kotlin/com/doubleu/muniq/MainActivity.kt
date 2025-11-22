@@ -2,6 +2,7 @@ package com.doubleu.muniq
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,7 +18,7 @@ import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        enableEdgeToEdge(navigationBarStyle = SystemBarStyle.auto(lightScrim = 0xffffffff.toInt(), darkScrim = 0xff000000.toInt()))
         super.onCreate(savedInstanceState)
 
         initKoin()

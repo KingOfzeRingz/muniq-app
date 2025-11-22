@@ -17,9 +17,6 @@ fun NavGraph(navigator: Navigator) {
 //            onFinished = { navigator.navigate(Screen.Map) }
 //        )
         Screen.Map -> MapScreen(
-            onMenuClick = {  },
-            onFilterClick = {  },
-            onFabClick = {  },
             onMapTap = { lat, lng ->
                 // later convert lat/lng → district
 //                navigator.navigate(Screen.DistrictDetail("TODO"))
