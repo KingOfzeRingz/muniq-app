@@ -6,8 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.doubleu.muniq.app.MuniqApp
 import com.doubleu.muniq.core.di.initKoin
-import com.doubleu.muniq.presentation.home.HomeScreen
+import com.doubleu.muniq.core.localization.Language
+import com.doubleu.muniq.core.localization.Localization
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -16,9 +19,18 @@ class MainActivity : ComponentActivity() {
 
         initKoin()
 
+        val deviceLang = Locale.getDefault().language
+        Localization.setLanguage(
+            when (deviceLang) {
+                "de" -> Language.DE
+                "ru" -> Language.RU
+                else -> Language.EN
+            }
+        )
+
+
         setContent {
-//            App()
-            HomeScreen()
+            MuniqApp()
         }
     }
 }
@@ -26,5 +38,5 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    App()
+    MuniqApp()
 }
