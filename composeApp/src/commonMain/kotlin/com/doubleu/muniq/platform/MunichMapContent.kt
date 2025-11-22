@@ -1,0 +1,234 @@
+package com.doubleu.muniq.platform
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.resource
+
+private const val USE_DISTINCT_DISTRICT_COLORS = false
+private val districtColorOverrides: Map<String, Int> = emptyMap()
+private const val DEFAULT_CAMERA_LATITUDE = 48.137154
+private const val DEFAULT_CAMERA_LONGITUDE = 11.576124
+private const val DEFAULT_CAMERA_ZOOM = 11f
+
+data class GeoCoordinate(val latitude: Double, val longitude: Double)
+
+data class GeoPolygon(val rings: List<List<GeoCoordinate>>) {
+    val outer: List<GeoCoordinate> get() = rings.firstOrNull().orEmpty()
+    val holes: List<List<GeoCoordinate>> get() =
+        if (rings.size <= 1) emptyList() else rings.subList(1, rings.size)
+}
+
+data class StyledDistrict(
+    val id: String,
+    val name: String,
+    val sbNumber: String?,
+    val polygons: List<GeoPolygon>,
+    val fillColor: Int,
+    val strokeColor: Int
+) {
+    val displayName: String = name.ifBlank { sbNumber ?: "Unknown" }
+}
+
+data class MapCamera(val latitude: Double, val longitude: Double, val zoom: Float)
+
+data class MunichMapContent(
+    val camera: MapCamera,
+    val districts: List<StyledDistrict>
+)
+
+@Composable
+fun rememberMunichMapContent(isDarkTheme: Boolean): MunichMapContent? {
+    var contentState by remember { mutableStateOf<MunichMapContent?>(null) }
+    val palette by rememberUpdatedState(MapPalette.fromTheme(isDarkTheme))
+
+    LaunchedEffect(isDarkTheme) {
+        val districts = MunichDistrictRepository.load()
+        contentState = MunichMapContent(
+            camera = MapCamera(
+                latitude = DEFAULT_CAMERA_LATITUDE,
+                longitude = DEFAULT_CAMERA_LONGITUDE,
+                zoom = DEFAULT_CAMERA_ZOOM
+            ),
+            districts = districts.map { it.toStyledDistrict(palette) }
+        )
+    }
+
+    return contentState
+}
+
+private object MunichDistrictRepository {
+    private val json = Json { ignoreUnknownKeys = true }
+    private val mutex = Mutex()
+    private var cached: List<DistrictGeometry>? = null
+
+    suspend fun load(): List<DistrictGeometry> {
+        cached?.let { return it }
+        return mutex.withLock {
+            cached?.let { return it }
+            val districts = parseGeoJson(readGeoJson())
+            cached = districts
+            districts
+        }
+    }
+
+    @OptIn(ExperimentalResourceApi::class)
+    private suspend fun readGeoJson(): String = withContext(Dispatchers.Default) {
+        resource("files/munich_districts.json")
+            .readBytes()
+            .decodeToString()
+    }
+
+    private fun parseGeoJson(raw: String): List<DistrictGeometry> {
+        val root = json.parseToJsonElement(raw).jsonObject
+        val features = root["features"]?.jsonArray ?: return emptyList()
+        return features.mapIndexedNotNull { index, element ->
+            val featureObject = element.jsonObject
+            val geometry = featureObject["geometry"]?.jsonObject ?: return@mapIndexedNotNull null
+            val type = geometry["type"]?.jsonPrimitive?.contentOrNull ?: return@mapIndexedNotNull null
+            val coordinates = geometry["coordinates"] ?: return@mapIndexedNotNull null
+            val polygons = when (type) {
+                "Polygon" -> listOfNotNull(coordinates.jsonArray.toPolygon())
+                "MultiPolygon" -> coordinates.jsonArray.mapNotNull { it.jsonArray.toPolygon() }
+                else -> emptyList()
+            }
+            if (polygons.isEmpty()) return@mapIndexedNotNull null
+            val properties = featureObject["properties"]?.jsonObject
+            DistrictGeometry(
+                id = featureObject["id"]?.jsonPrimitive?.content ?: "feature-$index",
+                name = properties?.get("name")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                sbNumber = properties?.get("sb_nummer")?.jsonPrimitive?.contentOrNull,
+                polygons = polygons
+            )
+        }
+    }
+}
+
+private fun JsonArray.toPolygon(): GeoPolygon? {
+    val rings = mapNotNull { ringElement ->
+        ringElement.jsonArray.mapNotNull { coord ->
+            coord.jsonArray.toCoordinate()
+        }.takeIf { it.isNotEmpty() }
+    }
+    return rings.takeIf { it.isNotEmpty() }?.let { GeoPolygon(it) }
+}
+
+private fun JsonArray.toCoordinate(): GeoCoordinate? {
+    if (size < 2) return null
+    val longitude = this[0].jsonPrimitive.doubleOrNull ?: return null
+    val latitude = this[1].jsonPrimitive.doubleOrNull ?: return null
+    return GeoCoordinate(latitude = latitude, longitude = longitude)
+}
+
+private data class DistrictGeometry(
+    val id: String,
+    val name: String,
+    val sbNumber: String?,
+    val polygons: List<GeoPolygon>
+)
+
+private data class MapPalette(
+    val strokeColor: Int,
+    val uniformFillColor: Int
+) {
+    fun fillColorFor(feature: DistrictGeometry): Int {
+        val override = feature.sbNumber
+            ?.let(districtColorOverrides::get)
+            ?.ensureAlpha(Color.alpha(uniformFillColor))
+        if (override != null) return override
+        return if (USE_DISTINCT_DISTRICT_COLORS) {
+            generatedColor(feature.sbNumber ?: feature.id)
+        } else {
+            uniformFillColor
+        }
+    }
+
+    companion object {
+        fun fromTheme(isDarkTheme: Boolean): MapPalette {
+            val stroke = if (isDarkTheme) {
+                argb(230, 255, 255, 255)
+            } else {
+                argb(230, 23, 64, 17)
+            }
+            val fill = if (isDarkTheme) {
+                argb(55, 46, 204, 113)
+            } else {
+                argb(70, 46, 204, 113)
+            }
+            return MapPalette(strokeColor = stroke, uniformFillColor = fill)
+        }
+    }
+}
+
+private fun DistrictGeometry.toStyledDistrict(palette: MapPalette): StyledDistrict {
+    return StyledDistrict(
+        id = id,
+        name = name.ifBlank { sbNumber?.let { "District $it" } ?: "Unknown" },
+        sbNumber = sbNumber,
+        polygons = polygons,
+        fillColor = palette.fillColorFor(this),
+        strokeColor = palette.strokeColor
+    )
+}
+
+private fun generatedColor(seed: String): Int {
+    val hash = seed.hashCode().let { if (it < 0) it * -1 else it }
+    val hue = hash % 360
+    val saturation = 0.55f
+    val value = 0.85f
+    return hsvToColor(alpha = 90, hue = hue.toFloat(), saturation = saturation, value = value)
+}
+
+private fun argb(alpha: Int, red: Int, green: Int, blue: Int): Int {
+    return ((alpha and 0xFF) shl 24) or
+        ((red and 0xFF) shl 16) or
+        ((green and 0xFF) shl 8) or
+        (blue and 0xFF)
+}
+
+private fun hsvToColor(alpha: Int, hue: Float, saturation: Float, value: Float): Int {
+    val c = value * saturation
+    val x = c * (1 - kotlin.math.abs((hue / 60f) % 2 - 1))
+    val m = value - c
+    val rgb = when (hue.toInt()) {
+        in 0..59 -> Triple(c, x, 0f)
+        in 60..119 -> Triple(x, c, 0f)
+        in 120..179 -> Triple(0f, c, x)
+        in 180..239 -> Triple(0f, x, c)
+        in 240..299 -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    val r = ((rgb.first + m) * 255).toInt()
+    val g = ((rgb.second + m) * 255).toInt()
+    val b = ((rgb.third + m) * 255).toInt()
+    return argb(alpha, r, g, b)
+}
+
+private fun Int.ensureAlpha(fallbackAlpha: Int): Int {
+    val currentAlpha = this ushr 24
+    return if (currentAlpha == 0xFF) {
+        (fallbackAlpha shl 24) or (this and 0x00FFFFFF)
+    } else {
+        this
+    }
+}
+
+private fun JsonObject?.propertyOrNull(key: String): String? =
+    this?.get(key)?.jsonPrimitive?.contentOrNull
+

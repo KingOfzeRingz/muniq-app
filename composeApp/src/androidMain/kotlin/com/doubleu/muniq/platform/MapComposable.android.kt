@@ -1,34 +1,25 @@
 package com.doubleu.muniq.platform
 
-import android.graphics.Color
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.doubleu.muniq.R
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.data.Feature
-import com.google.maps.android.data.geojson.GeoJsonFeature
-import com.google.maps.android.data.geojson.GeoJsonLayer
-import com.google.maps.android.data.geojson.GeoJsonPolygonStyle
-import java.util.Locale
-import org.json.JSONObject
 
 private const val DARK_MAP_STYLE_JSON = """
 [
@@ -45,14 +36,6 @@ private const val DARK_MAP_STYLE_JSON = """
 ]
 """
 
-/**
- * Flip this flag once you are ready to graduate from a uniform accent color to
- * automatically generated hues per district.
- */
-private const val USE_DISTINCT_DISTRICT_COLORS = false
-private const val MAP_LOG_TAG = "MuniqMap"
-private val districtColorOverrides: Map<String, Int> = emptyMap()
-
 @Composable
 actual fun MuniqMap(
     modifier: Modifier,
@@ -60,23 +43,23 @@ actual fun MuniqMap(
     onTap: (Double, Double) -> Unit
 ) {
     val context = LocalContext.current
-    val munichCenter = LatLng(48.137154, 11.576124)
+    val munichCenter = LatLng(DEFAULT_CAMERA_LATITUDE, DEFAULT_CAMERA_LONGITUDE)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(munichCenter, 11f)
+        position = CameraPosition.fromLatLngZoom(munichCenter, DEFAULT_CAMERA_ZOOM)
     }
 
-    var geoJsonString by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(context) {
-        geoJsonString = runCatching {
-            context.resources.openRawResource(R.raw.munich_districts)
-                .bufferedReader()
-                .use { it.readText() }
-        }.onFailure {
-            Log.e(MAP_LOG_TAG, "Failed to load munich_districts.geojson", it)
-        }.getOrNull()
-    }
+    val mapContent = rememberMunichMapContent(isDarkTheme)
+    val latestMapContent by rememberUpdatedState(mapContent)
 
-    var geoJsonLayer by remember { mutableStateOf<GeoJsonLayer?>(null) }
+    LaunchedEffect(latestMapContent?.camera) {
+        val camera = latestMapContent?.camera ?: return@LaunchedEffect
+        cameraPositionState.animate(
+            CameraUpdateFactory.newLatLngZoom(
+                LatLng(camera.latitude, camera.longitude),
+                camera.zoom
+            )
+        )
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         GoogleMap(
@@ -106,112 +89,28 @@ actual fun MuniqMap(
                 onTap(latLng.latitude, latLng.longitude)
             }
         ) {
-            MapEffect(isDarkTheme, geoJsonString) { googleMap ->
-                geoJsonLayer?.removeLayerFromMap()
-                val jsonPayload = geoJsonString
-                if (jsonPayload == null) {
-                    Log.w(MAP_LOG_TAG, "Munich district data not available yet")
-                    geoJsonLayer = null
-                    return@MapEffect
+            mapContent?.districts?.forEach { district ->
+                district.polygons.forEach { polygon ->
+                    Polygon(
+                        points = polygon.outer.map { it.toLatLng() },
+                        holes = polygon.holes.map { ring -> ring.map { coord -> coord.toLatLng() } },
+                        strokeColor = Color(district.strokeColor),
+                        strokeWidth = 3.75f,
+                        fillColor = Color(district.fillColor),
+                        zIndex = 2.5f,
+                        clickable = true,
+                        onClick = {
+                            Toast.makeText(
+                                context,
+                                "District: ${district.displayName}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
                 }
-
-                val layer = GeoJsonLayer(googleMap, JSONObject(jsonPayload))
-                layer.applyDistrictStyling(isDarkTheme)
-                layer.setOnFeatureClickListener { feature ->
-                    val districtName = feature.districtName()
-                    Toast
-                        .makeText(
-                            context,
-                            "District: $districtName",
-                            Toast.LENGTH_SHORT
-                        )
-                        .show()
-                }
-                layer.addLayerToMap()
-                geoJsonLayer = layer
             }
         }
     }
 }
 
-private fun GeoJsonLayer.applyDistrictStyling(isDarkTheme: Boolean) {
-    val strokeColor = if (isDarkTheme) {
-        Color.argb(230, 255, 255, 255)
-    } else {
-        Color.argb(230, 23, 64, 17)
-    }
-    val uniformFillColor = if (isDarkTheme) {
-        Color.argb(55, 46, 204, 113)
-    } else {
-        Color.argb(70, 46, 204, 113)
-    }
-
-    for (feature in features) {
-        val fillColor = feature.resolveFillColor(
-            uniformColor = uniformFillColor,
-            fallbackAlpha = Color.alpha(uniformFillColor)
-        )
-
-        val style = GeoJsonPolygonStyle().apply {
-            this.fillColor = fillColor
-            this.strokeColor = strokeColor
-            strokeWidth = 3.75f
-            zIndex = 2.5f
-            isClickable = true
-        }
-        feature.polygonStyle = style
-    }
-}
-
-private fun GeoJsonFeature.resolveFillColor(
-    uniformColor: Int,
-    fallbackAlpha: Int
-): Int {
-    val sbNummer = getProperty("sb_nummer")
-    val overrideColor = sbNummer?.let(districtColorOverrides::get)
-    if (overrideColor != null) {
-        return overrideColor.ensureAlpha(fallbackAlpha)
-    }
-
-    return if (USE_DISTINCT_DISTRICT_COLORS) {
-        generatedColor(seedOverride = sbNummer)
-    } else {
-        uniformColor
-    }
-}
-
-private fun GeoJsonFeature.generatedColor(seedOverride: String? = null): Int {
-    val identifier = listOfNotNull(
-        seedOverride,
-        getProperty("sb_nummer"),
-        getProperty("objectid"),
-        id
-    ).firstOrNull().orEmpty()
-    val normalizedHash = (identifier.hashCode() % 360).let { if (it < 0) it + 360 else it }
-    val hsv = floatArrayOf(normalizedHash.toFloat(), 0.55f, 0.85f)
-    return Color.HSVToColor(90, hsv)
-}
-
-private fun Int.ensureAlpha(fallbackAlpha: Int): Int {
-    val alpha = Color.alpha(this)
-    return if (alpha == 0xFF) {
-        Color.argb(
-            fallbackAlpha,
-            Color.red(this),
-            Color.green(this),
-            Color.blue(this)
-        )
-    } else {
-        this
-    }
-}
-
-private fun Feature.districtName(): String {
-    return listOf(
-        getProperty("name"),
-        getProperty("sb_name"),
-        getProperty("sb_nummer")
-    ).firstOrNull { !it.isNullOrBlank() }
-        ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-        ?: "Unknown"
-}
+private fun GeoCoordinate.toLatLng(): LatLng = LatLng(latitude, longitude)

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    id("org.jetbrains.kotlin.native.cocoapods")
 }
 
 kotlin {
@@ -14,7 +15,12 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-    
+
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
     listOf(
         iosArm64(),
         iosSimulatorArm64()
@@ -24,7 +30,20 @@ kotlin {
             isStatic = true
         }
     }
-    
+
+    cocoapods {
+        name = "ComposeApp"
+        summary = "Shared Compose Multiplatform module for Muniq"
+        homepage = "https://github.com/doubleu/muniq"
+        version = "1.0"
+        ios.deploymentTarget = "15.0"
+        framework {
+            baseName = "ComposeApp"
+            isStatic = true
+        }
+        pod("GoogleMaps")
+    }
+
     sourceSets {
         androidMain.dependencies {
             implementation(compose.preview)
@@ -51,7 +70,13 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
+            implementation(libs.kotlinx.serialization.json)
 
+        }
+        wasmJsMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.html.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -89,5 +114,9 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
+}
+
+compose.experimental {
+    web.application { }
 }
 
