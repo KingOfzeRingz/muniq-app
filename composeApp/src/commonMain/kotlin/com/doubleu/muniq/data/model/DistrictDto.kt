@@ -18,9 +18,9 @@ data class DistrictMetricsDto(
     val air_pm25: Double,
     val pt_stops: Double,
     val bike_lanes_km: Double,
-    val childcare_spots: Int,
+    val childcare_spots: Double,  // API returns as Double, not Int
     val rent_m2: Double,
-    val population_density: Int
+    val population_density: Double  // API returns as Double, not Int
 )
 
 @Serializable
@@ -34,4 +34,17 @@ data class DistrictScoresDto(
     val density: Int,
     val rent: Int,
     val overall: Int
-)
+) {
+    fun getScoreFor(type: com.doubleu.muniq.core.model.MetricType): Int {
+        return when (type) {
+            com.doubleu.muniq.core.model.MetricType.GREEN -> green
+            com.doubleu.muniq.core.model.MetricType.QUIET -> quiet
+            com.doubleu.muniq.core.model.MetricType.AIR -> air
+            com.doubleu.muniq.core.model.MetricType.BIKE -> bike
+            com.doubleu.muniq.core.model.MetricType.CHILD -> family
+            com.doubleu.muniq.core.model.MetricType.DENSITY -> density
+            com.doubleu.muniq.core.model.MetricType.RENT -> rent
+            com.doubleu.muniq.core.model.MetricType.STUDENT -> mobility  // Map student to mobility
+        }
+    }
+}

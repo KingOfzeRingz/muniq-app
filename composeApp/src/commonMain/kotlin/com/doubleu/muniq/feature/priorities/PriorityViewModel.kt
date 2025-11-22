@@ -35,4 +35,8 @@ class PriorityViewModel : ViewModel() {
     fun moveToNotRelevant(type: MetricType) {
         repository.moveToNotRelevant(type)
     }
+
+    fun reorderImportant(newOrder: List<MetricType>) {
+        repository.reorderImportant(newOrder)
+    }
 }

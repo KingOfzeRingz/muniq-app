@@ -10,5 +10,7 @@ expect fun MuniqMap(
     modifier: Modifier = Modifier,
     isDarkTheme: Boolean = false,
     districts: List<District> = emptyList(),
+    importantMetrics: List<com.doubleu.muniq.core.model.MetricType> = emptyList(),
+    ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType> = emptyList(),
     onTap: (latitude: Double, longitude: Double) -> Unit = { _, _ -> }
 )

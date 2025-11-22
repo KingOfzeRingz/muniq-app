@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.doubleu.muniq.app.di.ServiceLocator
 import com.doubleu.muniq.feature.sidebar.MuniqSidebarContent
 import com.doubleu.muniq.feature.sidebar.SidebarLayout
 import com.doubleu.muniq.feature.sidebar.DrawerState
@@ -28,6 +29,9 @@ fun MapScreen(
     viewModel: MapViewModel = androidx.lifecycle.viewmodel.compose.viewModel { MapViewModel() }
 ) {
     val districts by viewModel.districts.collectAsState()
+    val userPreferences = ServiceLocator.userPreferencesRepository
+    val importantMetrics by userPreferences.importantMetrics.collectAsState()
+    val notRelevantMetrics by userPreferences.notRelevantMetrics.collectAsState()
 
     SidebarLayout(
         drawerState = drawerState,

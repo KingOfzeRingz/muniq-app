@@ -46,9 +46,11 @@ actual fun MuniqMap(
     modifier: Modifier,
     isDarkTheme: Boolean,
     districts: List<District>,
+    importantMetrics: List<com.doubleu.muniq.core.model.MetricType>,
+    ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType>,
     onTap: (Double, Double) -> Unit
 ) {
-    val mapContent = rememberMunichMapContent(isDarkTheme, districts)
+    val mapContent = rememberMunichMapContent(isDarkTheme, districts, importantMetrics, ignoredMetrics)
     val latestMapContent by rememberUpdatedState(mapContent)
     val latestOnTap by rememberUpdatedState(onTap)
     val delegate = remember { MuniqMapDelegate() }

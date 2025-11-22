@@ -54,6 +54,7 @@ private fun DistrictDto.toDomain(): District {
         id = id.toString(),
         name = name,
         overallScore = scores.overall,
-        metrics = metrics
+        metrics = metrics,
+        scores = scores  // Pass raw scores for dynamic calculation
     )
 }

@@ -58,13 +58,25 @@ data class MunichMapContent(
 @Composable
 fun rememberMunichMapContent(
     isDarkTheme: Boolean,
-    districtStats: List<District> = emptyList()
+    districtStats: List<District> = emptyList(),
+    importantMetrics: List<com.doubleu.muniq.core.model.MetricType> = emptyList(),
+    ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType> = emptyList()
 ): MunichMapContent? {
     var contentState by remember { mutableStateOf<MunichMapContent?>(null) }
     val palette by rememberUpdatedState(MapPalette.fromTheme(isDarkTheme))
 
-    LaunchedEffect(isDarkTheme, districtStats) {
+    LaunchedEffect(isDarkTheme, districtStats, importantMetrics, ignoredMetrics) {
         val districts = MunichDistrictRepository.load()
+        val hasStats = districtStats.isNotEmpty()
+        
+        // DEBUG: Print what we have
+        println("🔍 DEBUG: districtStats.size = ${districtStats.size}")
+        println("🔍 DEBUG: importantMetrics = $importantMetrics")
+        println("🔍 DEBUG: ignoredMetrics = $ignoredMetrics")
+        districtStats.take(3).forEach { stat ->
+            println("🔍 DEBUG: API District - id='${stat.id}', name='${stat.name}', score=${stat.overallScore}")
+        }
+        
         contentState = MunichMapContent(
             camera = MapCamera(
                 latitude = DEFAULT_CAMERA_LATITUDE,
@@ -72,15 +84,48 @@ fun rememberMunichMapContent(
                 zoom = DEFAULT_CAMERA_ZOOM
             ),
             districts = districts.map { geometry ->
-                val stats = districtStats.find { it.name == geometry.name || it.id == geometry.id }
+                // DEBUG: Print GeoJSON data
+                println("🗺️ DEBUG: GeoJSON - id='${geometry.id}', sbNumber='${geometry.sbNumber}', name='${geometry.name}'")
+                
+                // Match by sb_nummer (from GeoJSON) to id (from API)
+                val stats = if (hasStats && geometry.sbNumber != null) {
+                    val found = districtStats.find { stat ->
+                        val match1 = stat.id == geometry.sbNumber
+                        val match2 = stat.id == geometry.sbNumber.toIntOrNull()?.toString()
+                        
+                        // DEBUG: Print matching attempts
+                        println("  🔎 Trying to match: stat.id='${stat.id}' with sbNumber='${geometry.sbNumber}'")
+                        println("     match1 (direct): $match1, match2 (via int): $match2")
+                        
+                        match1 || match2
+                    }
+                    
+                    if (found != null) {
+                        println("  ✅ MATCHED! score=${found.overallScore}")
+                    } else {
+                        println("  ❌ NO MATCH FOUND")
+                    }
+                    
+                    found
+                } else null
+                
+                // Calculate color based on whether we have stats
                 val color = if (stats != null) {
-                    calculateColor(stats.overallScore)
+                    // DYNAMIC CALCULATION HERE using importance-based weights
+                    val dynamicScore = com.doubleu.muniq.domain.ScoreCalculator.calculatePersonalizedScore(
+                        scores = stats.scores,
+                        importantMetrics = importantMetrics,
+                        ignoredMetrics = ignoredMetrics
+                    )
+                    println("  🎨 Dynamic Score: $dynamicScore")
+                    calculateColor(dynamicScore)  // Use the new dynamic score for color
                 } else {
+                    // Use default palette color only if we don't have any stats loaded yet
                     palette.fillColorFor(geometry)
                 }
                 
                 StyledDistrict(
-                    id = geometry.id,
+                    id = geometry.sbNumber ?: geometry.id,
                     name = geometry.name.ifBlank { geometry.sbNumber?.let { "District $it" } ?: "Unknown" },
                     sbNumber = geometry.sbNumber,
                     polygons = geometry.polygons,
@@ -94,9 +139,42 @@ fun rememberMunichMapContent(
     return contentState
 }
 
+/**
+ * Normalizes district names for better matching:
+ * - Converts to lowercase
+ * - Removes extra spaces
+ * - Replaces hyphens and underscores with spaces
+ */
+private fun normalizeDistrictName(name: String): String {
+    return name.trim()
+        .lowercase()
+        .replace("-", " ")
+        .replace("_", " ")
+        .replace(Regex("\\s+"), " ")
+}
+
+/**
+ * Calculates color based on score (0-100).
+ * 0-20: Red
+ * 20-40: Orange
+ * 40-60: Yellow
+ * 60-80: Light Green
+ * 80-100: Dark Green
+ */
 private fun calculateColor(score: Int): Int {
-    val hue = (score / 100f) * 120f
-    return hsvToColor(alpha = 180, hue = hue, saturation = 0.7f, value = 0.9f)
+    // Ensure score is in valid range
+    val clampedScore = score.coerceIn(0, 100)
+    
+    // Map score to hue: 0 (red) -> 120 (green)
+    val hue = (clampedScore / 100f) * 120f
+    
+    // Higher saturation and value for better visibility
+    return hsvToColor(
+        alpha = 200,  // More opaque for better visibility
+        hue = hue,
+        saturation = 0.85f,  // High saturation for vibrant colors
+        value = 0.95f  // High brightness
+    )
 }
 
 private object MunichDistrictRepository {
@@ -192,9 +270,9 @@ private data class MapPalette(
                 argb(230, 23, 64, 17)
             }
             val fill = if (isDarkTheme) {
-                argb(55, 46, 204, 113)
+                argb(150, 255, 20, 147)  // Pink (DeepPink) for testing
             } else {
-                argb(70, 46, 204, 113)
+                argb(150, 255, 105, 180)  // HotPink for testing
             }
             return MapPalette(strokeColor = stroke, uniformFillColor = fill)
         }
