@@ -14,13 +14,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import muniq.composeapp.generated.resources.Res
-import kotlinx.serialization.json.contentOrNull
+import com.doubleu.muniq.core.model.District
 
 private const val USE_DISTINCT_DISTRICT_COLORS = false
 private val districtColorOverrides: Map<String, Int> = emptyMap()
@@ -55,11 +56,14 @@ data class MunichMapContent(
 )
 
 @Composable
-fun rememberMunichMapContent(isDarkTheme: Boolean): MunichMapContent? {
+fun rememberMunichMapContent(
+    isDarkTheme: Boolean,
+    districtStats: List<District> = emptyList()
+): MunichMapContent? {
     var contentState by remember { mutableStateOf<MunichMapContent?>(null) }
     val palette by rememberUpdatedState(MapPalette.fromTheme(isDarkTheme))
 
-    LaunchedEffect(isDarkTheme) {
+    LaunchedEffect(isDarkTheme, districtStats) {
         val districts = MunichDistrictRepository.load()
         contentState = MunichMapContent(
             camera = MapCamera(
@@ -67,11 +71,32 @@ fun rememberMunichMapContent(isDarkTheme: Boolean): MunichMapContent? {
                 longitude = DEFAULT_CAMERA_LONGITUDE,
                 zoom = DEFAULT_CAMERA_ZOOM
             ),
-            districts = districts.map { it.toStyledDistrict(palette) }
+            districts = districts.map { geometry ->
+                val stats = districtStats.find { it.name == geometry.name || it.id == geometry.id }
+                val color = if (stats != null) {
+                    calculateColor(stats.overallScore)
+                } else {
+                    palette.fillColorFor(geometry)
+                }
+                
+                StyledDistrict(
+                    id = geometry.id,
+                    name = geometry.name.ifBlank { geometry.sbNumber?.let { "District $it" } ?: "Unknown" },
+                    sbNumber = geometry.sbNumber,
+                    polygons = geometry.polygons,
+                    fillColor = color,
+                    strokeColor = palette.strokeColor
+                )
+            }
         )
     }
 
     return contentState
+}
+
+private fun calculateColor(score: Int): Int {
+    val hue = (score / 100f) * 120f
+    return hsvToColor(alpha = 180, hue = hue, saturation = 0.7f, value = 0.9f)
 }
 
 private object MunichDistrictRepository {
@@ -91,6 +116,7 @@ private object MunichDistrictRepository {
 
     @OptIn(ExperimentalResourceApi::class)
     private suspend fun readGeoJson(): String = withContext(Dispatchers.Default) {
+        // Note: Ensure "files/munich_districts.json" exists in composeApp/src/commonMain/composeResources/files/
         Res.readBytes("files/munich_districts.json").decodeToString()
     }
 
@@ -196,9 +222,9 @@ private fun generatedColor(seed: String): Int {
 
 private fun argb(alpha: Int, red: Int, green: Int, blue: Int): Int {
     return ((alpha and 0xFF) shl 24) or
-        ((red and 0xFF) shl 16) or
-        ((green and 0xFF) shl 8) or
-        (blue and 0xFF)
+            ((red and 0xFF) shl 16) or
+            ((green and 0xFF) shl 8) or
+            (blue and 0xFF)
 }
 
 private fun hsvToColor(alpha: Int, hue: Float, saturation: Float, value: Float): Int {
@@ -230,4 +256,3 @@ private fun Int.ensureAlpha(fallbackAlpha: Int): Int {
 
 private fun JsonObject?.propertyOrNull(key: String): String? =
     this?.get(key)?.jsonPrimitive?.contentOrNull
-

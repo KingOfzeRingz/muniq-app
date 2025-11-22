@@ -19,6 +19,12 @@ import com.doubleu.muniq.core.localization.Strings
 import com.doubleu.muniq.feature.map.MapScreen
 import com.doubleu.muniq.feature.settings.SettingsScreen
 import com.doubleu.muniq.feature.settings.ThemePreference
+import com.doubleu.muniq.feature.splash.SplashScreen
+
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.doubleu.muniq.feature.priorities.PrioritySheet
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -32,6 +38,7 @@ fun NavGraph(
     strings: Strings
 ) {
     val screen by navigator.current.collectAsState()
+    var showPrioritySheet by remember { mutableStateOf(false) }
 
     AnimatedContent(
         modifier = Modifier.fillMaxSize(),
@@ -55,14 +62,23 @@ fun NavGraph(
         }
     ) { destination ->
         when (destination) {
-            Screen.Map -> MapScreen(
-                isDarkTheme = darkTheme,
-                strings = strings,
-                onOpenSettings = { navigator.navigate(Screen.Settings) },
-                onMapTap = { lat, lng ->
-                    // later convert lat/lng → district
+            Screen.Map -> {
+                MapScreen(
+                    isDarkTheme = darkTheme,
+                    strings = strings,
+                    onOpenSettings = { navigator.navigate(Screen.Settings) },
+                    onFilterClick = { showPrioritySheet = true },
+                    onMapTap = { lat, lng ->
+                        // later convert lat/lng → district
+                    }
+                )
+                
+                if (showPrioritySheet) {
+                    PrioritySheet(
+                        onDismiss = { showPrioritySheet = false }
+                    )
                 }
-            )
+            }
             Screen.Settings -> SettingsScreen(
                 strings = strings,
                 currentLanguage = currentLanguage,
@@ -70,6 +86,9 @@ fun NavGraph(
                 themePreference = themePreference,
                 onThemePreferenceChange = onThemePreferenceChange,
                 onBack = navigator::backToMap
+            )
+            Screen.Splash -> SplashScreen(
+                onNavigateToMap = { navigator.navigate(Screen.Map) }
             )
         }
     }

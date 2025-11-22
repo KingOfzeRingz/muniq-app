@@ -24,8 +24,11 @@ fun MapScreen(
     onMapTap: (Double, Double) -> Unit = { _, _ -> },
     onOpenSettings: () -> Unit = {},
     isDarkTheme: Boolean = false,
-    strings: com.doubleu.muniq.core.localization.Strings = com.doubleu.muniq.core.localization.Localization.strings
+    strings: com.doubleu.muniq.core.localization.Strings = com.doubleu.muniq.core.localization.Localization.strings,
+    viewModel: MapViewModel = androidx.lifecycle.viewmodel.compose.viewModel { MapViewModel() }
 ) {
+    val districts by viewModel.districts.collectAsState()
+
     SidebarLayout(
         drawerState = drawerState,
         drawerContent = {
@@ -44,6 +47,7 @@ fun MapScreen(
             MuniqMap(
                 modifier = Modifier.fillMaxSize(),
                 isDarkTheme = isDarkTheme,
+                districts = districts,
                 onTap = onMapTap
             )
 

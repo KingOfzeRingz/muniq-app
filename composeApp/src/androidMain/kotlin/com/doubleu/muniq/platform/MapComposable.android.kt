@@ -20,6 +20,7 @@ import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.doubleu.muniq.core.model.District
 
 private const val DARK_MAP_STYLE_JSON = """
 [
@@ -40,6 +41,7 @@ private const val DARK_MAP_STYLE_JSON = """
 actual fun MuniqMap(
     modifier: Modifier,
     isDarkTheme: Boolean,
+    districts: List<District>,
     onTap: (Double, Double) -> Unit
 ) {
     val context = LocalContext.current
@@ -48,7 +50,7 @@ actual fun MuniqMap(
         position = CameraPosition.fromLatLngZoom(munichCenter, DEFAULT_CAMERA_ZOOM)
     }
 
-    val mapContent = rememberMunichMapContent(isDarkTheme)
+    val mapContent = rememberMunichMapContent(isDarkTheme, districts)
     val latestMapContent by rememberUpdatedState(mapContent)
 
     LaunchedEffect(latestMapContent?.camera) {

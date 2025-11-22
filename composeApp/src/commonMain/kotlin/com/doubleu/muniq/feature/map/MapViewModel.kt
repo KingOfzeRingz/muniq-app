@@ -1,33 +1,32 @@
 package com.doubleu.muniq.feature.map
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.doubleu.muniq.app.di.ServiceLocator
 import com.doubleu.muniq.core.model.District
-import com.doubleu.muniq.data.DistrictRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.doubleu.muniq.domain.ScoreCalculator
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flow
 
-class MapViewModel(
-    private val repository: DistrictRepository = ServiceLocator.districtRepository
-) {
-    private val scope = CoroutineScope(Dispatchers.Default + Job())
+class MapViewModel : ViewModel() {
+    private val districtRepository = ServiceLocator.districtRepository
+    private val userPreferencesRepository = ServiceLocator.userPreferencesRepository
 
-    private val _districts = MutableStateFlow<List<District>>(emptyList())
-    val districts: StateFlow<List<District>> = _districts
-
-    private val _selectedDistrictId = MutableStateFlow<String?>(null)
-    val selectedDistrictId: StateFlow<String?> = _selectedDistrictId
-
-    init {
-        scope.launch {
-            _districts.value = repository.getAllDistricts()
-        }
+    private val _rawDistricts = flow {
+        emit(districtRepository.getAllDistricts())
     }
 
-    fun onDistrictTapped(id: String) {
-        _selectedDistrictId.value = id
-    }
+    val districts: StateFlow<List<District>> = combine(
+        _rawDistricts,
+        userPreferencesRepository.importantMetrics
+    ) { districts, importantMetrics ->
+        ScoreCalculator.calculateScores(districts, importantMetrics)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 }

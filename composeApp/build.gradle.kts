@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     id("org.jetbrains.kotlin.native.cocoapods")
+    kotlin("plugin.serialization") version "2.2.21"
 }
 
 kotlin {
@@ -54,6 +55,7 @@ kotlin {
             implementation("com.google.android.gms:play-services-maps:19.2.0")
             implementation("io.insert-koin:koin-android:4.1.1")
             implementation(compose.runtime)
+            implementation(libs.ktor.client.android)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -71,7 +73,20 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
 
+        }
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain.get())
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                implementation(libs.ktor.client.darwin)
+            }
         }
 //        wasmJsMain.dependencies {
 //            implementation(compose.runtime)

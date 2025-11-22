@@ -16,6 +16,7 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.cValue
 import platform.CoreGraphics.CGRectMake
+import platform.CoreLocation.CLLocationCoordinate2D
 import platform.Foundation.NSError
 import platform.Foundation.NSMutableArray
 import cocoapods.GoogleMaps.GMSCameraPosition
@@ -29,6 +30,7 @@ import cocoapods.GoogleMaps.GMSPolygon
 import cocoapods.GoogleMaps.kGMSTypeNormal
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
+import com.doubleu.muniq.core.model.District
 import platform.UIKit.NSTextAlignmentCenter
 import platform.UIKit.UIApplication
 import platform.UIKit.UIColor
@@ -43,9 +45,10 @@ import platform.UIKit.animateWithDuration
 actual fun MuniqMap(
     modifier: Modifier,
     isDarkTheme: Boolean,
+    districts: List<District>,
     onTap: (Double, Double) -> Unit
 ) {
-    val mapContent = rememberMunichMapContent(isDarkTheme)
+    val mapContent = rememberMunichMapContent(isDarkTheme, districts)
     val latestMapContent by rememberUpdatedState(mapContent)
     val latestOnTap by rememberUpdatedState(onTap)
     val delegate = remember { MuniqMapDelegate() }
@@ -127,11 +130,8 @@ private fun GMSMapView.updateCamera(camera: MapCamera?) {
 }
 
 private fun GMSMapView.animateToLocation(latitude: Double, longitude: Double, zoom: Float) {
-    val target = cValue<cocoapods.GoogleMaps.CLLocationCoordinate2D> {
-        this.latitude = latitude
-        this.longitude = longitude
-    }
-    val update = GMSCameraUpdate.setTarget(target, zoom = zoom)
+    val camera = GMSCameraPosition.cameraWithLatitude(latitude, longitude, zoom)
+    val update = GMSCameraUpdate.setCamera(camera)
     moveCamera(update)
 }
 
@@ -165,7 +165,7 @@ private class MuniqMapDelegate : platform.darwin.NSObject(), GMSMapViewDelegateP
     var onDistrictTap: ((String) -> Unit)? = null
     var isDarkTheme: Boolean = false
 
-    override fun mapView(mapView: GMSMapView, didTapAtCoordinate: CValue<cocoapods.GoogleMaps.CLLocationCoordinate2D>) {
+    override fun mapView(mapView: GMSMapView, didTapAtCoordinate: CValue<CLLocationCoordinate2D>) {
         didTapAtCoordinate.useContents {
             onMapTap?.invoke(latitude, longitude)
         }
