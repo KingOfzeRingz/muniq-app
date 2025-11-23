@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.doubleu.muniq.app.di.ServiceLocator
 import com.doubleu.muniq.feature.sidebar.MuniqSidebarContent
 import com.doubleu.muniq.feature.sidebar.SidebarLayout
 import com.doubleu.muniq.feature.sidebar.DrawerState
@@ -28,12 +27,11 @@ fun MapScreen(
     onOpenSettings: () -> Unit = {},
     isDarkTheme: Boolean = false,
     strings: com.doubleu.muniq.core.localization.Strings = com.doubleu.muniq.core.localization.Localization.strings,
+    importantMetrics: List<com.doubleu.muniq.core.model.MetricType> = emptyList(),
+    ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType> = emptyList(),
     viewModel: MapViewModel = koinViewModel()
 ) {
     val districts by viewModel.districts.collectAsState()
-    val userPreferences = ServiceLocator.userPreferencesRepository
-    val importantMetrics by userPreferences.importantMetrics.collectAsState()
-    val notRelevantMetrics by userPreferences.notRelevantMetrics.collectAsState()
 
     // State for selected district
     var selectedDistrict by remember { mutableStateOf<com.doubleu.muniq.core.model.District?>(null) }
@@ -58,7 +56,7 @@ fun MapScreen(
                 isDarkTheme = isDarkTheme,
                 districts = districts,
                 importantMetrics = importantMetrics,
-                ignoredMetrics = notRelevantMetrics,
+                ignoredMetrics = ignoredMetrics,
                 onTap = onMapTap,
                 onDistrictClick = { district ->
                     selectedDistrict = district
@@ -91,7 +89,7 @@ fun MapScreen(
             DistrictDetailBottomSheet(
                 district = district,
                 importantMetrics = importantMetrics,
-                ignoredMetrics = notRelevantMetrics,
+                ignoredMetrics = ignoredMetrics,
                 strings = strings,
                 onDismiss = { selectedDistrict = null }
             )

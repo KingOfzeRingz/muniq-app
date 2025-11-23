@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.doubleu.muniq.feature.priorities.PrioritySheet
+import com.doubleu.muniq.data.UserPreferencesRepository
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -39,6 +41,11 @@ fun NavGraph(
 ) {
     val screen by navigator.current.collectAsState()
     var showPrioritySheet by remember { mutableStateOf(false) }
+
+    // Inject repository to observe state at the top level
+    val userPreferences: UserPreferencesRepository = koinInject()
+    val importantMetrics by userPreferences.importantMetrics.collectAsState()
+    val ignoredMetrics by userPreferences.notRelevantMetrics.collectAsState()
 
     AnimatedContent(
         modifier = Modifier.fillMaxSize(),
@@ -66,6 +73,8 @@ fun NavGraph(
                 MapScreen(
                     isDarkTheme = darkTheme,
                     strings = strings,
+                    importantMetrics = importantMetrics,
+                    ignoredMetrics = ignoredMetrics,
                     onOpenSettings = { navigator.navigate(Screen.Settings) },
                     onFilterClick = { showPrioritySheet = true },
                     onMapTap = { lat, lng ->

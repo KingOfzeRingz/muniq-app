@@ -68,7 +68,11 @@ fun rememberMunichMapContent(
     var contentState by remember { mutableStateOf<MunichMapContent?>(null) }
     val palette by rememberUpdatedState(MapPalette.fromTheme(isDarkTheme))
 
-    LaunchedEffect(isDarkTheme, districtStats, importantMetrics, ignoredMetrics) {
+    // Create keys from list contents to properly detect changes
+    val importantMetricsKey = importantMetrics.joinToString(",") { it.name }
+    val ignoredMetricsKey = ignoredMetrics.joinToString(",") { it.name }
+
+    LaunchedEffect(isDarkTheme, districtStats, importantMetricsKey, ignoredMetricsKey) {
         val geometries = MunichDistrictRepository.load()
         val styledDistricts = geometries.map { geometry ->
             val matchedDistrict = matchDistrictForGeometry(geometry, districtStats)

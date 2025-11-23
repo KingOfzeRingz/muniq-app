@@ -55,6 +55,6 @@ class UserPreferencesRepository {
     }
 
     fun reorderImportant(newOrder: List<MetricType>) {
-        _importantMetrics.value = newOrder
+        _importantMetrics.update { newOrder }
     }
 }

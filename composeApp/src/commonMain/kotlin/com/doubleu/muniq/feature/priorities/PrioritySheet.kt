@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.doubleu.muniq.core.localization.Strings
 import com.doubleu.muniq.core.model.MetricType
 import org.koin.compose.viewmodel.koinViewModel
@@ -195,17 +196,23 @@ fun PrioritySheet(
 @Composable
 fun ActivePriorityItem(
     metric: MetricType,
-    metricName: String,
+    metricName: String, // Make sure to pass this if you added it, or use metric.displayName
     isDragging: Boolean,
     elevation: Dp,
     dragHandleModifier: Modifier,
     onRemove: () -> Unit
 ) {
+    // FIX: Lift the item above others when dragging so the shadow isn't cut off
+    val zIndex = if (isDragging) 1f else 0f
+
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        // Use 'elevation' passed from parent for the physical shadow size
         shadowElevation = elevation,
-        modifier = Modifier.fillMaxWidth()
+        color = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .zIndex(zIndex)
     ) {
         Row(
             modifier = Modifier
@@ -218,7 +225,7 @@ fun ActivePriorityItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Text(
-                text = metricName,
+                text = metricName, // Or metric.displayName
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f)
