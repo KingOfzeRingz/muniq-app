@@ -2,17 +2,20 @@ package com.doubleu.muniq.feature.map
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.doubleu.muniq.core.model.District
@@ -28,85 +31,101 @@ fun DistrictDetailBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val personalizedScore = ScoreCalculator.calculatePersonalizedScore(
-        scores = district.scores,
-        importantMetrics = importantMetrics,
-        ignoredMetrics = ignoredMetrics
-    )
+    val personalizedScore = remember(district, importantMetrics, ignoredMetrics) {
+        ScoreCalculator.calculatePersonalizedScore(
+            scores = district.scores,
+            importantMetrics = importantMetrics,
+            ignoredMetrics = ignoredMetrics
+        )
+    }
+
+    val metricItems = remember(importantMetrics, ignoredMetrics) {
+        MetricType.values().map { metricType ->
+            val priority = when {
+                metricType in ignoredMetrics -> MetricPriority.IGNORED
+                metricType in importantMetrics -> {
+                    val position = importantMetrics.indexOf(metricType) + 1
+                    MetricPriority.Important(position)
+                }
+
+                else -> MetricPriority.STANDARD
+            }
+            metricType to priority
+        }
+    }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        modifier = modifier,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
+        modifier = modifier
+            .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 8.dp, bottom = 16.dp)
+                    .width(48.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
+        }
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp)
+                .padding(horizontal = 24.dp),
+            contentPadding = PaddingValues(bottom = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = district.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Close"
+            // 1. Header Section
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = district.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
                     )
                 }
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // 2. Score Display
+            item {
+                ScoreDisplay(
+                    score = personalizedScore,
+                    label = "Personalized Score"
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
 
-            // Overall Score Display
-            ScoreDisplay(
-                score = personalizedScore,
-                label = "Personalized Score"
-            )
+            // 3. Metrics Title
+            item {
+                Text(
+                    text = "Metrics Breakdown",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Metrics Breakdown
-            Text(
-                text = "Metrics Breakdown",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MetricType.values().forEach { metricType ->
-                    val score = district.scores.getScoreFor(metricType)
-                    val priority = when {
-                        metricType in ignoredMetrics -> MetricPriority.IGNORED
-                        metricType in importantMetrics -> {
-                            val position = importantMetrics.indexOf(metricType) + 1
-                            MetricPriority.Important(position)
-                        }
-                        else -> MetricPriority.STANDARD
-                    }
-                    
-                    MetricScoreItem(
-                        metricName = metricType.displayName,
-                        score = score,
-                        priority = priority
-                    )
-                }
+            // 4. Metrics List
+            items(metricItems) { (metricType, priority) ->
+                val score = district.scores.getScoreFor(metricType)
+                MetricScoreItem(
+                    metricName = metricType.displayName,
+                    score = score,
+                    priority = priority
+                )
             }
         }
     }
@@ -154,14 +173,15 @@ private fun MetricScoreItem(
     priority: MetricPriority,
     modifier: Modifier = Modifier
 ) {
-    val isIgnored = priority is MetricPriority.IGNORED
-    val alpha = if (isIgnored) 0.4f else 1f
+    val alpha = 1f
 
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -190,26 +210,20 @@ private fun MetricScoreItem(
                     text = score.toString(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isIgnored) {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
-                    } else {
-                        getScoreColor(score)
-                    }
+                    color = getScoreColor(score)
                 )
             }
 
-            if (!isIgnored) {
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
                     progress = { score / 100f },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
+                        .height(6.dp)
                         .clip(RoundedCornerShape(4.dp)),
                     color = getScoreColor(score),
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
-            }
         }
     }
 }
@@ -235,9 +249,11 @@ private fun PriorityBadge(
                 )
             }
         }
+
         MetricPriority.STANDARD -> {
-            // No badge for standard metrics
+            // No badge
         }
+
         MetricPriority.IGNORED -> {
             Surface(
                 modifier = modifier,
@@ -258,11 +274,11 @@ private fun PriorityBadge(
 @Composable
 private fun getScoreColor(score: Int): Color {
     return when {
-        score >= 80 -> Color(0xFF4CAF50) // Green
-        score >= 60 -> Color(0xFF8BC34A) // Light Green
-        score >= 40 -> Color(0xFFFFC107) // Yellow/Amber
-        score >= 20 -> Color(0xFFFF9800) // Orange
-        else -> Color(0xFFF44336) // Red
+        score >= 80 -> Color(0xFF4CAF50)
+        score >= 60 -> Color(0xFF8BC34A)
+        score >= 40 -> Color(0xFFFFC107)
+        score >= 20 -> Color(0xFFFF9800)
+        else -> Color(0xFFF44336)
     }
 }
 
@@ -278,6 +294,6 @@ private fun getScoreLabel(score: Int): String {
 
 private sealed class MetricPriority {
     data class Important(val position: Int) : MetricPriority()
-    object STANDARD : MetricPriority()
-    object IGNORED : MetricPriority()
+    data object STANDARD : MetricPriority()
+    data object IGNORED : MetricPriority()
 }
