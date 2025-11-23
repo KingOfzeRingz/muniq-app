@@ -77,7 +77,7 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
-
+            implementation("sh.calvin.reorderable:reorderable:3.0.0")
         }
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting
