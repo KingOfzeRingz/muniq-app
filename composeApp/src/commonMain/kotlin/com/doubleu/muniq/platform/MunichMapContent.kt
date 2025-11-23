@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import com.doubleu.muniq.core.model.District
 import com.doubleu.muniq.core.model.MetricType
 import com.doubleu.muniq.domain.ScoreCalculator
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import muniq.composeapp.generated.resources.Res
 
 private const val USE_DISTINCT_DISTRICT_COLORS = false
 private val districtColorOverrides: Map<String, Int> = emptyMap()
@@ -68,11 +70,7 @@ fun rememberMunichMapContent(
     var contentState by remember { mutableStateOf<MunichMapContent?>(null) }
     val palette by rememberUpdatedState(MapPalette.fromTheme(isDarkTheme))
 
-    // Create keys from list contents to properly detect changes
-    val importantMetricsKey = importantMetrics.joinToString(",") { it.name }
-    val ignoredMetricsKey = ignoredMetrics.joinToString(",") { it.name }
-
-    LaunchedEffect(isDarkTheme, districtStats, importantMetricsKey, ignoredMetricsKey) {
+    LaunchedEffect(isDarkTheme, districtStats, importantMetrics, ignoredMetrics) {
         val geometries = MunichDistrictRepository.load()
         val styledDistricts = geometries.map { geometry ->
             val matchedDistrict = matchDistrictForGeometry(geometry, districtStats)
@@ -187,7 +185,7 @@ private object MunichDistrictRepository {
     @OptIn(ExperimentalResourceApi::class)
     private suspend fun readGeoJson(): String = withContext(Dispatchers.Default) {
         // Note: Ensure "files/munich_districts.json" exists in composeApp/src/commonMain/composeResources/files/
-        muniq.composeapp.generated.resources.Res.readBytes("files/munich_districts.json").decodeToString()
+        Res.readBytes("files/munich_districts.json").decodeToString()
     }
 
     private fun parseGeoJson(raw: String): List<DistrictGeometry> {

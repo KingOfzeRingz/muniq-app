@@ -24,6 +24,7 @@ import org.w3c.dom.HTMLDivElement
 import org.w3c.dom.HTMLScriptElement
 
 private const val GOOGLE_MAPS_WEB_API_KEY = "YOUR_WEB_GOOGLE_MAPS_API_KEY"
+private const val MAP_SCRIPT_ID = "google-maps-script"
 
 @Suppress("UNUSED_PARAMETER")
 @Composable
@@ -101,7 +102,7 @@ private object GoogleMapsBridge {
 
     private suspend fun waitUntilReady() {
         while (!isLibraryReady()) {
-            kotlinx.coroutines.delay(50)
+            delay(50)
         }
     }
 
@@ -110,13 +111,13 @@ private object GoogleMapsBridge {
             continuation.resumeWithException(IllegalStateException("Cannot access DOM head"))
             return@suspendCancellableCoroutine
         }
-        val existing = document.getElementById("google-maps-script")
+        val existing = document.getElementById(MAP_SCRIPT_ID)
         if (existing != null) {
             continuation.resume(Unit)
             return@suspendCancellableCoroutine
         }
         val script = document.createElement("script") as HTMLScriptElement
-        script.id = "google-maps-script"
+        script.id = MAP_SCRIPT_ID
         script.async = true
         script.defer = true
         script.src = "https://maps.googleapis.com/maps/api/js?key=$GOOGLE_MAPS_WEB_API_KEY"
@@ -129,13 +130,13 @@ private object GoogleMapsBridge {
         head.appendChild(script)
     }
 
-           fun render(
-               containerId: String,
-               content: MunichMapContent,
-               isDarkTheme: Boolean,
-               onMapTap: (Double, Double) -> Unit,
-               onPolygonTap: (com.doubleu.muniq.core.model.District?) -> Unit
-           ) {
+    fun render(
+        containerId: String,
+        content: MunichMapContent,
+        isDarkTheme: Boolean,
+        onMapTap: (Double, Double) -> Unit,
+        onPolygonTap: (District?) -> Unit
+    ) {
         val container = document.getElementById(containerId) ?: return
         if (mapInstance == null) {
             mapInstance = js("new google.maps.Map")(
@@ -146,7 +147,7 @@ private object GoogleMapsBridge {
                     disableDefaultUI = true
                 }
             )
-            mapInstance.addListener("click") { event: dynamic ->
+            addDomListener(mapInstance, "click") { event ->
                 val lat = event.latLng?.lat()
                 val lng = event.latLng?.lng()
                 if (lat is Double && lng is Double) {
@@ -165,12 +166,12 @@ private object GoogleMapsBridge {
         applyTheme(isDarkTheme)
         clearOverlays()
 
-               content.districts.forEach { district ->
+        content.districts.forEach { district ->
             district.polygons.forEach { polygon ->
                 val paths = mutableListOf<dynamic>()
-                paths += polygon.outer.toJsPath()
-                polygon.holes.mapTo(paths) { hole -> hole.toJsPath() }
-                val polygonOptions = jsObject<dynamic> {
+                paths.add(polygon.outer.toJsPath())
+                polygon.holes.forEach { hole -> paths.add(hole.toJsPath()) }
+                val polygonOptions = jsObject {
                     this.paths = paths.toTypedArray()
                     this.strokeColor = district.strokeColor.toCssColor()
                     this.strokeWeight = 3.75
@@ -181,29 +182,29 @@ private object GoogleMapsBridge {
                 }
                 val jsPolygon = js("new google.maps.Polygon")(polygonOptions)
                 jsPolygon.setMap(mapInstance)
-                       jsPolygon.addListener("click") {
-                           WebToast.show("District: ${district.displayName}")
-                           onPolygonTap(district.sourceDistrict)
-                       }
-                overlays += jsPolygon
+                addDomListener(jsPolygon, "click") {
+                    WebToast.show("District: ${district.displayName}")
+                    onPolygonTap(district.sourceDistrict)
+                }
+                overlays.add(jsPolygon)
             }
         }
     }
 
     private fun clearOverlays() {
         overlays.forEach { overlay ->
-               overlay.setMap(null)
+            overlay.setMap(null)
         }
         overlays.clear()
     }
 
     private fun applyTheme(isDarkTheme: Boolean) {
         if (!isDarkTheme) {
-            mapInstance?.setOptions(jsObject<dynamic> { styles = null })
+            mapInstance?.setOptions(jsObject { styles = null })
             return
         }
         val styles = js("JSON.parse")(DARK_MAP_STYLE_JSON)
-        mapInstance?.setOptions(jsObject<dynamic> { this.styles = styles })
+        mapInstance?.setOptions(jsObject { this.styles = styles })
     }
 }
 
@@ -211,7 +212,7 @@ private fun List<GeoCoordinate>.toJsPath(): Array<dynamic> =
     map { latLngLiteral(it.latitude, it.longitude) }.toTypedArray()
 
 private fun latLngLiteral(lat: Double, lng: Double): dynamic =
-    jsObject<dynamic> {
+    jsObject {
         this.lat = lat
         this.lng = lng
     }
@@ -232,6 +233,25 @@ private fun jsObject(builder: dynamic.() -> Unit): dynamic {
     builder(obj)
     return obj
 }
+
+private fun addDomListener(target: dynamic, eventName: String, listener: (dynamic) -> Unit) {
+    js("google.maps.event.addListener")(target, eventName, listener)
+}
+
+private const val DARK_MAP_STYLE_JSON = """
+[
+  {"elementType":"geometry","stylers":[{"color":"#1f1f1f"}]},
+  {"elementType":"labels.text.fill","stylers":[{"color":"#90caf9"}]},
+  {"elementType":"labels.text.stroke","stylers":[{"color":"#1f1f1f"}]},
+  {"featureType":"administrative","elementType":"geometry","stylers":[{"color":"#212121"}]},
+  {"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#e0e0e0"}]},
+  {"featureType":"poi.park","elementType":"geometry.fill","stylers":[{"color":"#1b5e20"}]},
+  {"featureType":"road","elementType":"geometry","stylers":[{"color":"#2c2c2c"}]},
+  {"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#b0bec5"}]},
+  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#0f172a"}]},
+  {"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#82b1ff"}]}
+]
+"""
 
 private object WebToast {
     fun show(message: String) {
@@ -267,4 +287,5 @@ private object WebToast {
         }, 1800)
     }
 }
+
 

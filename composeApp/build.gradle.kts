@@ -17,10 +17,10 @@ kotlin {
         }
     }
 
-//    wasmJs {
-//        browser()
-//        binaries.executable()
-//    }
+    js(IR) {
+        browser()
+        binaries.executable()
+    }
 
     listOf(
         iosArm64(),
@@ -78,6 +78,7 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation("sh.calvin.reorderable:reorderable:3.0.0")
+
         }
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting
@@ -89,11 +90,14 @@ kotlin {
                 implementation(libs.ktor.client.darwin)
             }
         }
-//        wasmJsMain.dependencies {
-//            implementation(compose.runtime)
-//            implementation(compose.foundation)
-//            implementation(compose.html.core)
-//        }
+        jsMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.components.resources)
+            implementation(compose.ui)
+            implementation(compose.web.core)
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
@@ -130,9 +134,5 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
-}
-
-compose.experimental {
-    web.application { }
 }
 
