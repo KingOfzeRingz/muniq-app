@@ -30,9 +30,13 @@ private const val GOOGLE_MAPS_WEB_API_KEY = "YOUR_WEB_GOOGLE_MAPS_API_KEY"
 actual fun MuniqMap(
     modifier: Modifier,
     isDarkTheme: Boolean,
-    onTap: (Double, Double) -> Unit
+    districts: List<District>,
+    importantMetrics: List<com.doubleu.muniq.core.model.MetricType>,
+    ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType>,
+    onTap: (latitude: Double, longitude: Double) -> Unit,
+    onDistrictClick: (District?) -> Unit
 ) {
-    val mapContent = rememberMunichMapContent(isDarkTheme)
+    val mapContent = rememberMunichMapContent(isDarkTheme, districts, importantMetrics, ignoredMetrics)
     val latestContent by rememberUpdatedState(mapContent)
     val latestOnTap by rememberUpdatedState(onTap)
     var selectedDistrict by remember { mutableStateOf<District?>(null) }
@@ -57,7 +61,7 @@ actual fun MuniqMap(
                 property("border-radius", "8px")
                 property("font-family", "sans-serif")
             }
-        }) { Text("District: ${selectedDistrict.name}") }
+        }) { Text("District: ${selectedDistrict?.name}") }
     }
 
     LaunchedEffect(latestContent, isDarkTheme) {
@@ -68,9 +72,10 @@ actual fun MuniqMap(
             content = content,
             isDarkTheme = isDarkTheme,
             onMapTap = latestOnTap,
-                   onPolygonTap = { district ->
-                       selectedDistrict = district
-                   }
+            onPolygonTap = { district ->
+                selectedDistrict = district
+                onDistrictClick(district)
+            }
         )
     }
 }

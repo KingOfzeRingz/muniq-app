@@ -48,7 +48,7 @@ actual fun MuniqMap(
     districts: List<District>,
     importantMetrics: List<com.doubleu.muniq.core.model.MetricType>,
     ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType>,
-    onTap: (Double, Double) -> Unit,
+    onTap: (latitude: Double, longitude: Double) -> Unit,
     onDistrictClick: (District?) -> Unit = {}
 ) {
     val mapContent = rememberMunichMapContent(isDarkTheme, districts, importantMetrics, ignoredMetrics)
