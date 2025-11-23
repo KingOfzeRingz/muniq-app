@@ -81,98 +81,119 @@ fun PrioritySheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 8.dp, bottom = 16.dp)
+                    .width(48.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
+        },
         modifier = Modifier.padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            state = listState,
-            contentPadding = PaddingValues(bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // --- Header (Index 0) ---
-            item {
-                Column(modifier = Modifier.padding(bottom = 24.dp)) {
-                    Text(
-                        text = "Your Priorities",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Drag the handle ≡ to sort. Top items matter most.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-
-            // --- Active Section Header (Index 1) ---
-            item {
-                SectionHeader("ACTIVE PRIORITIES", MaterialTheme.colorScheme.primary)
-            }
-
-            if (importantItems.isEmpty()) {
-                item { EmptyState("Tap items below to add them here") }
-            }
-
-            // --- Draggable Items ---
-            // Note: key = { it } is CRITICAL for the key-based logic above to work
-            items(importantItems, key = { it }) { metric ->
-                ReorderableItem(reorderableState, key = metric) { isDragging ->
-                    val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
-
-                    LaunchedEffect(isDragging) {
-                        if (isDragging) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    }
-
-                    ActivePriorityItem(
-                        metric = metric,
-                        isDragging = isDragging,
-                        elevation = elevation,
-                        dragHandleModifier = Modifier.draggableHandle(),
-                        onRemove = { viewModel.moveToNotRelevant(metric) }
-                    )
-                }
-            }
-
-            // --- Divider ---
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // --- Ignored Section Header ---
-            item {
-                SectionHeader("IGNORED", MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-
-            items(uiState.notRelevant, key = { it }) { metric ->
-                IgnoredPriorityItem(
-                    metric = metric,
-                    onAdd = { viewModel.moveToImportant(metric) }
-                )
-            }
-        }
-
-        // Fixed Button
-        Box(
-            modifier = Modifier
-                .align(Alignment.End)
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(100)
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                state = listState,
+                contentPadding = PaddingValues(bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Update Map", fontSize = 16.sp)
+                // --- Header (Index 0) ---
+                item {
+                    Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                        Text(
+                            text = "Your Priorities",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Drag the handle ≡ to sort. Top items matter most.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+
+                // --- Active Section Header (Index 1) ---
+                item {
+                    SectionHeader("ACTIVE PRIORITIES", MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                if (importantItems.isEmpty()) {
+                    item { EmptyState("Tap items below to add them here") }
+                }
+
+                // --- Draggable Items ---
+                // Note: key = { it } is CRITICAL for the key-based logic above to work
+                items(importantItems, key = { it }) { metric ->
+                    ReorderableItem(reorderableState, key = metric) { isDragging ->
+                        val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+
+                        LaunchedEffect(isDragging) {
+                            if (isDragging) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+
+                        ActivePriorityItem(
+                            metric = metric,
+                            isDragging = isDragging,
+                            elevation = elevation,
+                            dragHandleModifier = Modifier.draggableHandle(),
+                            onRemove = { viewModel.moveToNotRelevant(metric) }
+                        )
+                    }
+                }
+
+                // --- Divider ---
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // --- Ignored Section Header ---
+                item {
+                    SectionHeader("IGNORED", MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                items(uiState.notRelevant, key = { it }) { metric ->
+                    IgnoredPriorityItem(
+                        metric = metric,
+                        onAdd = { viewModel.moveToImportant(metric) }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            // Fixed Button
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
+                    .padding(horizontal = 24.dp)
+                    // Add background gradient/blur if needed for better visibility over list
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface)
+                        )
+                    )
+            ) {
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(100)
+                ) {
+                    Text("Update Map", fontSize = 16.sp)
+                }
             }
         }
     }
@@ -187,8 +208,8 @@ fun ActivePriorityItem(
     onRemove: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (isDragging) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(24.dp),
+        color = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         shadowElevation = elevation,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -244,8 +265,8 @@ fun IgnoredPriorityItem(
 ) {
     Surface(
         onClick = onAdd,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
     ) {
         Row(
             modifier = Modifier
