@@ -25,8 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.koin.compose.viewmodel.koinViewModel
+import com.doubleu.muniq.core.localization.Strings
 import com.doubleu.muniq.core.model.MetricType
+import org.koin.compose.viewmodel.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -34,15 +35,14 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 @Composable
 fun PrioritySheet(
     viewModel: PriorityViewModel = koinViewModel(),
+    strings: Strings,
     onDismiss: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val haptic = LocalHapticFeedback.current
     val listState = rememberLazyListState()
 
-    // FIX 1: Local Mutable State
-    // We use a local list for the UI to prevent glitches during rapid dragging.
-    // We sync it with the ViewModel state whenever the VM updates (e.g. adding/removing items).
+    // ... (Keep existing state logic) ...
     val importantItems = remember { mutableStateListOf<MetricType>() }
 
     LaunchedEffect(uiState.important) {
@@ -50,10 +50,7 @@ fun PrioritySheet(
         importantItems.addAll(uiState.important)
     }
 
-    // FIX 2: Robust Reordering Logic using KEYS
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
-        // Instead of relying on raw indices (which include headers), we find the items
-        // in our list based on their unique Keys (MetricType).
         val fromKey = from.key as? MetricType
         val toKey = to.key as? MetricType
 
@@ -62,13 +59,9 @@ fun PrioritySheet(
             val toIndex = importantItems.indexOf(toKey)
 
             if (fromIndex != -1 && toIndex != -1) {
-                // Move in local list first (UI updates instantly)
                 val item = importantItems.removeAt(fromIndex)
                 importantItems.add(toIndex, item)
-
-                // Notify ViewModel (Data updates)
                 viewModel.reorderImportant(importantItems.toList())
-
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
         }
@@ -107,13 +100,13 @@ fun PrioritySheet(
                 item {
                     Column(modifier = Modifier.padding(bottom = 24.dp)) {
                         Text(
-                            text = "Your Priorities",
+                            text = strings.priority_sheet_title,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Drag the handle ≡ to sort. Top items matter most.",
+                            text = strings.priority_sheet_description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp)
@@ -123,15 +116,14 @@ fun PrioritySheet(
 
                 // --- Active Section Header (Index 1) ---
                 item {
-                    SectionHeader("ACTIVE PRIORITIES", MaterialTheme.colorScheme.onSurfaceVariant)
+                    SectionHeader(strings.priority_active_section, MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 if (importantItems.isEmpty()) {
-                    item { EmptyState("Tap items below to add them here") }
+                    item { EmptyState(strings.priority_empty_state) }
                 }
 
                 // --- Draggable Items ---
-                // Note: key = { it } is CRITICAL for the key-based logic above to work
                 items(importantItems, key = { it }) { metric ->
                     ReorderableItem(reorderableState, key = metric) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
@@ -142,6 +134,7 @@ fun PrioritySheet(
 
                         ActivePriorityItem(
                             metric = metric,
+                            metricName = getLocalizedMetricName(metric, strings),
                             isDragging = isDragging,
                             elevation = elevation,
                             dragHandleModifier = Modifier.draggableHandle(),
@@ -159,12 +152,13 @@ fun PrioritySheet(
 
                 // --- Ignored Section Header ---
                 item {
-                    SectionHeader("IGNORED", MaterialTheme.colorScheme.onSurfaceVariant)
+                    SectionHeader(strings.priority_ignored_section, MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 items(uiState.notRelevant, key = { it }) { metric ->
                     IgnoredPriorityItem(
                         metric = metric,
+                        metricName = getLocalizedMetricName(metric, strings),
                         onAdd = { viewModel.moveToImportant(metric) }
                     )
                 }
@@ -180,7 +174,6 @@ fun PrioritySheet(
                     .fillMaxWidth()
                     .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
                     .padding(horizontal = 24.dp)
-                    // Add background gradient/blur if needed for better visibility over list
                     .background(
                         brush = androidx.compose.ui.graphics.Brush.verticalGradient(
                             colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface)
@@ -192,7 +185,7 @@ fun PrioritySheet(
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(100)
                 ) {
-                    Text("Update Map", fontSize = 16.sp)
+                    Text(strings.priority_update_map_button, fontSize = 16.sp)
                 }
             }
         }
@@ -202,9 +195,10 @@ fun PrioritySheet(
 @Composable
 fun ActivePriorityItem(
     metric: MetricType,
+    metricName: String,
     isDragging: Boolean,
     elevation: Dp,
-    dragHandleModifier: Modifier, // This modifier enables dragging
+    dragHandleModifier: Modifier,
     onRemove: () -> Unit
 ) {
     Surface(
@@ -224,7 +218,7 @@ fun ActivePriorityItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Text(
-                text = metric.displayName,
+                text = metricName,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f)
@@ -244,8 +238,6 @@ fun ActivePriorityItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Apply the drag modifier ONLY to this icon
-            // This ensures the rest of the row allows scrolling
             Icon(
                 Icons.Rounded.DragHandle,
                 contentDescription = "Reorder",
@@ -261,6 +253,7 @@ fun ActivePriorityItem(
 @Composable
 fun IgnoredPriorityItem(
     metric: MetricType,
+    metricName: String,
     onAdd: () -> Unit
 ) {
     Surface(
@@ -277,7 +270,7 @@ fun IgnoredPriorityItem(
             EmojiIcon(metric)
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = metric.displayName,
+                text = metricName,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.weight(1f)
@@ -291,7 +284,34 @@ fun IgnoredPriorityItem(
     }
 }
 
-// ... (Helper functions EmojiIcon, SectionHeader, EmptyState remain the same)
+// ... (Helper functions EmojiIcon, SectionHeader, EmptyState remain the same) ...
+
+private fun getLocalizedMetricName(type: MetricType, strings: Strings): String {
+    return when (type) {
+        MetricType.RENT -> strings.metric_rent
+        MetricType.GREEN -> strings.metric_green
+        MetricType.CHILD -> strings.metric_child
+        MetricType.STUDENT -> strings.metric_student
+        MetricType.QUIET -> strings.metric_quiet
+        MetricType.AIR -> strings.metric_air
+        MetricType.BIKE -> strings.metric_bike
+        MetricType.DENSITY -> strings.metric_density
+    }
+}
+
+private fun getEmojiForMetric(type: MetricType): String {
+    return when (type) {
+        MetricType.RENT -> "💸"
+        MetricType.GREEN -> "🌳"
+        MetricType.CHILD -> "👶"
+        MetricType.STUDENT -> "🎓"
+        MetricType.QUIET -> "🤫"
+        MetricType.AIR -> "💨"
+        MetricType.BIKE -> "🚴"
+        MetricType.DENSITY -> "🏙️"
+    }
+}
+
 @Composable
 fun EmojiIcon(metric: MetricType) {
     Box(
@@ -328,19 +348,5 @@ fun EmptyState(text: String) {
         contentAlignment = Alignment.Center
     ) {
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
-    }
-}
-
-private fun getEmojiForMetric(type: MetricType): String {
-    return when (type) {
-        MetricType.RENT -> "💸"
-        MetricType.GREEN -> "🌳"
-        MetricType.CHILD -> "👶"
-        MetricType.STUDENT -> "🎓"
-        MetricType.QUIET -> "🤫"
-        MetricType.AIR -> "💨"
-        MetricType.BIKE -> "🚴"
-        MetricType.DENSITY -> "🏙️"
-        else -> "❓" // Fallback
     }
 }

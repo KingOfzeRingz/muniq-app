@@ -92,6 +92,7 @@ fun MapScreen(
                 district = district,
                 importantMetrics = importantMetrics,
                 ignoredMetrics = notRelevantMetrics,
+                strings = strings,
                 onDismiss = { selectedDistrict = null }
             )
         }

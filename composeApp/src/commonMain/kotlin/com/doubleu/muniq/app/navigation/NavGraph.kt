@@ -75,6 +75,7 @@ fun NavGraph(
                 
                 if (showPrioritySheet) {
                     PrioritySheet(
+                        strings = strings,
                         onDismiss = { showPrioritySheet = false }
                     )
                 }

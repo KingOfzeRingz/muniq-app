@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.doubleu.muniq.core.model.District
 import com.doubleu.muniq.core.model.MetricType
 import com.doubleu.muniq.domain.ScoreCalculator
+import com.doubleu.muniq.core.localization.Strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +29,7 @@ fun DistrictDetailBottomSheet(
     district: District,
     importantMetrics: List<MetricType>,
     ignoredMetrics: List<MetricType>,
+    strings: Strings,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -103,7 +105,8 @@ fun DistrictDetailBottomSheet(
             item {
                 ScoreDisplay(
                     score = personalizedScore,
-                    label = "Personalized Score"
+                    label = strings.district_detail_personalized_score,
+                    strings = strings
                 )
                 Spacer(modifier = Modifier.height(20.dp))
             }
@@ -111,7 +114,7 @@ fun DistrictDetailBottomSheet(
             // 3. Metrics Title
             item {
                 Text(
-                    text = "Metrics Breakdown",
+                    text = strings.district_detail_metrics_breakdown,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -122,9 +125,10 @@ fun DistrictDetailBottomSheet(
             items(metricItems) { (metricType, priority) ->
                 val score = district.scores.getScoreFor(metricType)
                 MetricScoreItem(
-                    metricName = metricType.displayName,
+                    metricName = getLocalizedMetricName(metricType, strings),
                     score = score,
-                    priority = priority
+                    priority = priority,
+                    strings = strings
                 )
             }
         }
@@ -135,6 +139,7 @@ fun DistrictDetailBottomSheet(
 private fun ScoreDisplay(
     score: Int,
     label: String,
+    strings: Strings,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -159,7 +164,7 @@ private fun ScoreDisplay(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = getScoreLabel(score),
+            text = getScoreLabel(score, strings),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -171,6 +176,7 @@ private fun MetricScoreItem(
     metricName: String,
     score: Int,
     priority: MetricPriority,
+    strings: Strings,
     modifier: Modifier = Modifier
 ) {
     val alpha = 1f
@@ -204,7 +210,7 @@ private fun MetricScoreItem(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    PriorityBadge(priority)
+                    PriorityBadge(priority, strings)
                 }
                 Text(
                     text = score.toString(),
@@ -231,6 +237,7 @@ private fun MetricScoreItem(
 @Composable
 private fun PriorityBadge(
     priority: MetricPriority,
+    strings: Strings,
     modifier: Modifier = Modifier
 ) {
     when (priority) {
@@ -241,7 +248,7 @@ private fun PriorityBadge(
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Text(
-                    text = "Priority #${priority.position}",
+                    text = strings.district_detail_priority_badge.replace("%d", priority.position.toString()),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -261,7 +268,7 @@ private fun PriorityBadge(
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Text(
-                    text = "Ignored",
+                    text = strings.district_detail_ignored_badge,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -282,13 +289,26 @@ private fun getScoreColor(score: Int): Color {
     }
 }
 
-private fun getScoreLabel(score: Int): String {
+private fun getScoreLabel(score: Int, strings: Strings): String {
     return when {
-        score >= 80 -> "Excellent"
-        score >= 60 -> "Good"
-        score >= 40 -> "Average"
-        score >= 20 -> "Below Average"
-        else -> "Poor"
+        score >= 80 -> strings.score_excellent
+        score >= 60 -> strings.score_good
+        score >= 40 -> strings.score_average
+        score >= 20 -> strings.score_below_average
+        else -> strings.score_poor
+    }
+}
+
+private fun getLocalizedMetricName(type: MetricType, strings: Strings): String {
+    return when (type) {
+        MetricType.RENT -> strings.metric_rent
+        MetricType.GREEN -> strings.metric_green
+        MetricType.CHILD -> strings.metric_child
+        MetricType.STUDENT -> strings.metric_student
+        MetricType.QUIET -> strings.metric_quiet
+        MetricType.AIR -> strings.metric_air
+        MetricType.BIKE -> strings.metric_bike
+        MetricType.DENSITY -> strings.metric_density
     }
 }
 
