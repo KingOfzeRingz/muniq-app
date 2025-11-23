@@ -14,8 +14,9 @@ data class PriorityUiState(
     val notRelevant: List<MetricType> = emptyList()
 )
 
-class PriorityViewModel : ViewModel() {
-    private val repository = ServiceLocator.userPreferencesRepository
+class PriorityViewModel(
+    private val repository: com.doubleu.muniq.data.UserPreferencesRepository
+) : ViewModel() {
 
     val uiState: StateFlow<PriorityUiState> = combine(
         repository.importantMetrics,
@@ -38,5 +39,25 @@ class PriorityViewModel : ViewModel() {
 
     fun reorderImportant(newOrder: List<MetricType>) {
         repository.reorderImportant(newOrder)
+    }
+
+    fun moveUp(metric: MetricType) {
+        val currentList = uiState.value.important.toMutableList()
+        val index = currentList.indexOf(metric)
+        if (index > 0) {
+            currentList.removeAt(index)
+            currentList.add(index - 1, metric)
+            reorderImportant(currentList)
+        }
+    }
+
+    fun moveDown(metric: MetricType) {
+        val currentList = uiState.value.important.toMutableList()
+        val index = currentList.indexOf(metric)
+        if (index < currentList.size - 1) {
+            currentList.removeAt(index)
+            currentList.add(index + 1, metric)
+            reorderImportant(currentList)
+        }
     }
 }

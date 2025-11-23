@@ -9,8 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.flow
 
-class MapViewModel : ViewModel() {
-    private val districtRepository = ServiceLocator.districtRepository
+class MapViewModel(
+    private val districtRepository: com.doubleu.muniq.data.DistrictRepository
+) : ViewModel() {
 
     // Simply fetch districts - scoring happens in MunichMapContent based on user preferences
     val districts: StateFlow<List<District>> = flow {

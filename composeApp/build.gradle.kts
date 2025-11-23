@@ -68,6 +68,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation("io.insert-koin:koin-core:4.1.1")
             implementation("io.insert-koin:koin-compose:4.1.1")
+            implementation("io.insert-koin:koin-compose-viewmodel:4.1.1")
             implementation(compose.runtime)
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)

@@ -18,6 +18,8 @@ import com.doubleu.muniq.feature.sidebar.SidebarLayout
 import com.doubleu.muniq.feature.sidebar.DrawerState
 import com.doubleu.muniq.platform.MuniqMap
 
+import org.koin.compose.viewmodel.koinViewModel
+
 @Composable
 fun MapScreen(
     drawerState: DrawerState = remember { DrawerState() },
@@ -26,7 +28,7 @@ fun MapScreen(
     onOpenSettings: () -> Unit = {},
     isDarkTheme: Boolean = false,
     strings: com.doubleu.muniq.core.localization.Strings = com.doubleu.muniq.core.localization.Localization.strings,
-    viewModel: MapViewModel = androidx.lifecycle.viewmodel.compose.viewModel { MapViewModel() }
+    viewModel: MapViewModel = koinViewModel()
 ) {
     val districts by viewModel.districts.collectAsState()
     val userPreferences = ServiceLocator.userPreferencesRepository
