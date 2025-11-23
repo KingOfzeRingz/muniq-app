@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.doubleu.muniq.core.model.District
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -20,8 +21,6 @@ import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.doubleu.muniq.core.model.District
-
 private const val DARK_MAP_STYLE_JSON = """
 [
   {"elementType":"geometry","stylers":[{"color":"#1f1f1f"}]},
@@ -44,7 +43,8 @@ actual fun MuniqMap(
     districts: List<District>,
     importantMetrics: List<com.doubleu.muniq.core.model.MetricType>,
     ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType>,
-    onTap: (Double, Double) -> Unit
+    onTap: (Double, Double) -> Unit,
+    onDistrictClick: (District?) -> Unit
 ) {
     val context = LocalContext.current
     val munichCenter = LatLng(DEFAULT_CAMERA_LATITUDE, DEFAULT_CAMERA_LONGITUDE)
@@ -93,22 +93,23 @@ actual fun MuniqMap(
                 onTap(latLng.latitude, latLng.longitude)
             }
         ) {
-            mapContent?.districts?.forEach { district ->
-                district.polygons.forEach { polygon ->
+            mapContent?.districts?.forEach { styledDistrict ->
+                styledDistrict.polygons.forEach { polygon ->
                     Polygon(
                         points = polygon.outer.map { it.toLatLng() },
                         holes = polygon.holes.map { ring -> ring.map { coord -> coord.toLatLng() } },
-                        strokeColor = Color(district.strokeColor),
+                        strokeColor = Color(styledDistrict.strokeColor),
                         strokeWidth = 3.75f,
-                        fillColor = Color(district.fillColor),
+                        fillColor = Color(styledDistrict.fillColor),
                         zIndex = 2.5f,
                         clickable = true,
                         onClick = {
                             Toast.makeText(
                                 context,
-                                "District: ${district.displayName}",
+                                "District: ${styledDistrict.displayName}",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            onDistrictClick(styledDistrict.sourceDistrict)
                         }
                     )
                 }

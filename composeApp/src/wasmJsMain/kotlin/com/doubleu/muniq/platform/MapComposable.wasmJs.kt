@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.doubleu.muniq.core.model.District
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
@@ -34,7 +35,7 @@ actual fun MuniqMap(
     val mapContent = rememberMunichMapContent(isDarkTheme)
     val latestContent by rememberUpdatedState(mapContent)
     val latestOnTap by rememberUpdatedState(onTap)
-    var selectedDistrict by remember { mutableStateOf<String?>(null) }
+    var selectedDistrict by remember { mutableStateOf<District?>(null) }
     val containerId = remember { "muniq-map-${Random.nextInt(0, Int.MAX_VALUE)}" }
 
     Div(attrs = {
@@ -56,7 +57,7 @@ actual fun MuniqMap(
                 property("border-radius", "8px")
                 property("font-family", "sans-serif")
             }
-        }) { Text("District: $selectedDistrict") }
+        }) { Text("District: ${selectedDistrict.name}") }
     }
 
     LaunchedEffect(latestContent, isDarkTheme) {
@@ -67,10 +68,9 @@ actual fun MuniqMap(
             content = content,
             isDarkTheme = isDarkTheme,
             onMapTap = latestOnTap,
-            onPolygonTap = {
-                selectedDistrict = it
-                WebToast.show("District: $it")
-            }
+                   onPolygonTap = { district ->
+                       selectedDistrict = district
+                   }
         )
     }
 }
@@ -124,13 +124,13 @@ private object GoogleMapsBridge {
         head.appendChild(script)
     }
 
-    fun render(
-        containerId: String,
-        content: MunichMapContent,
-        isDarkTheme: Boolean,
-        onMapTap: (Double, Double) -> Unit,
-        onPolygonTap: (String) -> Unit
-    ) {
+           fun render(
+               containerId: String,
+               content: MunichMapContent,
+               isDarkTheme: Boolean,
+               onMapTap: (Double, Double) -> Unit,
+               onPolygonTap: (com.doubleu.muniq.core.model.District?) -> Unit
+           ) {
         val container = document.getElementById(containerId) ?: return
         if (mapInstance == null) {
             mapInstance = js("new google.maps.Map")(
@@ -160,7 +160,7 @@ private object GoogleMapsBridge {
         applyTheme(isDarkTheme)
         clearOverlays()
 
-        content.districts.forEach { district ->
+               content.districts.forEach { district ->
             district.polygons.forEach { polygon ->
                 val paths = mutableListOf<dynamic>()
                 paths += polygon.outer.toJsPath()
@@ -176,9 +176,10 @@ private object GoogleMapsBridge {
                 }
                 val jsPolygon = js("new google.maps.Polygon")(polygonOptions)
                 jsPolygon.setMap(mapInstance)
-                jsPolygon.addListener("click") {
-                    onPolygonTap(district.displayName)
-                }
+                       jsPolygon.addListener("click") {
+                           WebToast.show("District: ${district.displayName}")
+                           onPolygonTap(district.sourceDistrict)
+                       }
                 overlays += jsPolygon
             }
         }
@@ -186,7 +187,7 @@ private object GoogleMapsBridge {
 
     private fun clearOverlays() {
         overlays.forEach { overlay ->
-            overlay.setMap(null)
+               overlay.setMap(null)
         }
         overlays.clear()
     }

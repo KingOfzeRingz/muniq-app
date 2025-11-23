@@ -48,7 +48,8 @@ actual fun MuniqMap(
     districts: List<District>,
     importantMetrics: List<com.doubleu.muniq.core.model.MetricType>,
     ignoredMetrics: List<com.doubleu.muniq.core.model.MetricType>,
-    onTap: (Double, Double) -> Unit
+    onTap: (Double, Double) -> Unit,
+    onDistrictClick: (District?) -> Unit = {}
 ) {
     val mapContent = rememberMunichMapContent(isDarkTheme, districts, importantMetrics, ignoredMetrics)
     val latestMapContent by rememberUpdatedState(mapContent)
@@ -81,7 +82,9 @@ actual fun MuniqMap(
         },
         update = { mapView ->
             delegate.onMapTap = latestOnTap
-            delegate.onDistrictTap = { name -> presentToast(name) }
+            delegate.onDistrictTap = { district ->
+                onDistrictClick(district)
+            }
             mapView.applyTheme(isDarkTheme)
             mapView.updateCamera(latestMapContent?.camera)
             mapView.renderDistricts(latestMapContent)
@@ -105,7 +108,7 @@ private fun GMSMapView.renderDistricts(content: MunichMapContent?) {
                 fillColor = district.fillColor.toUIColor()
                 strokeWidth = 3.75
                 tappable = true
-                userData = district.displayName as Any?
+                userData = DistrictOverlayPayload(district.displayName, district.sourceDistrict)
                 holes = polygon.holes.toHolesArray() as List<*>?
             }
             overlay.map = this
@@ -164,7 +167,7 @@ private fun Int.toUIColor(): UIColor {
 
 private class MuniqMapDelegate : platform.darwin.NSObject(), GMSMapViewDelegateProtocol {
     var onMapTap: ((Double, Double) -> Unit)? = null
-    var onDistrictTap: ((String) -> Unit)? = null
+    var onDistrictTap: ((District?) -> Unit)? = null
     var isDarkTheme: Boolean = false
 
     override fun mapView(mapView: GMSMapView, didTapAtCoordinate: CValue<CLLocationCoordinate2D>) {
@@ -174,10 +177,16 @@ private class MuniqMapDelegate : platform.darwin.NSObject(), GMSMapViewDelegateP
     }
 
     override fun mapView(mapView: GMSMapView, didTapOverlay: GMSOverlay) {
-        val districtName = didTapOverlay.userData as? String ?: return
-        onDistrictTap?.invoke(districtName)
+        val payload = didTapOverlay.userData as? DistrictOverlayPayload ?: return
+        presentToast(payload.displayName)
+        onDistrictTap?.invoke(payload.district)
     }
 }
+
+private data class DistrictOverlayPayload(
+    val displayName: String,
+    val district: District?
+)
 
 private fun presentToast(message: String) {
     val window = activeWindow() ?: return

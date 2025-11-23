@@ -33,6 +33,9 @@ fun MapScreen(
     val importantMetrics by userPreferences.importantMetrics.collectAsState()
     val notRelevantMetrics by userPreferences.notRelevantMetrics.collectAsState()
 
+    // State for selected district
+    var selectedDistrict by remember { mutableStateOf<com.doubleu.muniq.core.model.District?>(null) }
+
     SidebarLayout(
         drawerState = drawerState,
         drawerContent = {
@@ -52,7 +55,12 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize(),
                 isDarkTheme = isDarkTheme,
                 districts = districts,
-                onTap = onMapTap
+                importantMetrics = importantMetrics,
+                ignoredMetrics = notRelevantMetrics,
+                onTap = onMapTap,
+                onDistrictClick = { district ->
+                    selectedDistrict = district
+                }
             )
 
             val safeArea = WindowInsets.safeDrawing.asPaddingValues()
@@ -73,6 +81,16 @@ fun MapScreen(
                     .padding(safeArea)
                     .padding(12.dp),
                 onClick = onFilterClick
+            )
+        }
+
+        // Show district detail bottom sheet when a district is selected
+        selectedDistrict?.let { district ->
+            DistrictDetailBottomSheet(
+                district = district,
+                importantMetrics = importantMetrics,
+                ignoredMetrics = notRelevantMetrics,
+                onDismiss = { selectedDistrict = null }
             )
         }
     }
